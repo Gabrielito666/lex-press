@@ -1,11 +1,11 @@
-# lexpress
+# lex-press
 
 Este proyecto surge de mi actual hastío de Next.js, que dejo de manifiesto. Estoy cansado de hacer archivos `route.js` que no aceptan *middlewares*, lo que me obliga a importar una gran cantidad de funciones repetitivas en múltiples archivos separados. Si bien me gusta React, últimamente siento que no se ajusta a la regla KISS (*Keep It Simple, Stupid*).
 
 **lexpress** pretende ser un envoltorio para Express con algunos métodos adicionales que aceleran ciertas tareas, con un sistema de soporte nativo para HTML dinámico.
 
 ```javascript
-    const lexpress = require('lexpress');
+    const lexpress = require('lex-press');
     const app = lexpress();
 
     app.public('my/public/folder');
