@@ -1,0 +1,11 @@
+{
+  "name": "lexpress",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Gabriel Farías Ravanal",
+  "license": "ISC",
+  "description": "graper from express",
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}
