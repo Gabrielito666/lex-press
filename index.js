@@ -1,5 +1,6 @@
 const express = require('express');
 const useGetDynamicHtml = require('./useGetDynamicHtml');
+const cookieParser = require('cookie-parser');
 
 class App
 {
@@ -7,6 +8,7 @@ class App
     {
         this._expApp = express();
         this._expApp.use(express.json());
+        this._expApp.use(cookieParser());
         this._promises_list = [];
     }
     get html()
