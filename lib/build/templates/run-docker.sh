@@ -9,4 +9,4 @@ VOLUME_PATH=$(pwd)/app/volumes
 
 mkdir -p $VOLUME_PATH
 
-docker run -d --name $CONTAINER_NAME -p $HOST_PORT:$CONTAINER_PORT -v $VOLUME_PATH:/app/volumes $IMAGE_NAME
+sudo docker run -d --name $CONTAINER_NAME -p $HOST_PORT:$CONTAINER_PORT -v $VOLUME_PATH:/app/volumes $IMAGE_NAME

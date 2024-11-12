@@ -1,6 +1,6 @@
 {
   "name": "lex-press",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "main": "index.js",
   "author": "Gabriel Farías Ravanal",
   "license": "ISC",
@@ -19,3 +19,4 @@
     "jsdom": "^25.0.1"
   }
 }
+
