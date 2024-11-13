@@ -1,6 +1,6 @@
 {
   "name": "lex-press",
-  "version": "1.0.25",
+  "version": "1.0.26",
   "main": "index.js",
   "author": "Gabriel Farías Ravanal",
   "license": "ISC",
@@ -11,7 +11,7 @@
   "dependencies": {
     "cookie-parser": "^1.4.6",
     "express": "^4.21.0",
-    "lex-builder": "^1.0.14",
+    "lex-builder": "^1.0.15",
     "ws": "^8.18.0"
   },
   "devDependencies": {
@@ -19,4 +19,3 @@
     "jsdom": "^25.0.1"
   }
 }
-
