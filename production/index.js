@@ -1,7 +1,7 @@
 const express = require('express');
 const cookieParser = require('cookie-parser');
 
-const CONSTS = require('../../../lib/consts');
+const CONSTS = require('../lib/consts');
 
 class App
 {
