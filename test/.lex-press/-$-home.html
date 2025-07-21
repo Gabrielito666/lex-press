@@ -1,0 +1,155 @@
+<html lexid="7"><head lexid="5"><title lexid="4">Test</title><script type="module">(() => {
+  var __create = Object.create;
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __getProtoOf = Object.getPrototypeOf;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __esm = (fn, res) => function __init() {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  };
+  var __commonJS = (cb, mod) => function __require() {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+    // If the importer is in node compatibility mode or this is not an ESM
+    // file that has been converted to a CommonJS file using a Babel-
+    // compatible transform (i.e. "__esModule" has not been set), then set
+    // "default" to the CommonJS "module.exports" for node compatibility.
+    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+    mod
+  ));
+
+  // ../node_modules/@lek-js/lex/index.js
+  var State, useState, useRef, lexElements, counter, createElement, Lex, lex_default;
+  var init_lex = __esm({
+    "../node_modules/@lek-js/lex/index.js"() {
+      State = class {
+        constructor(initValue) {
+          this._value = initValue;
+          this.onChangesStack = [];
+        }
+        get() {
+          return this._value;
+        }
+        set(newValue) {
+          this._value = newValue;
+          this.onChangesStack.forEach((fn) => fn(newValue));
+        }
+        valueOf() {
+          return this._value;
+        }
+        toString() {
+          return String(this._value);
+        }
+        appendOnChange(fn) {
+          if (typeof fn === "function") this.onChangesStack.push(fn);
+        }
+      };
+      useState = (initValue) => {
+        const state = new State(initValue);
+        return [state, (newValue) => {
+          state.set(newValue);
+        }];
+      };
+      useRef = (initValue) => ({ current: initValue });
+      lexElements = Array.from(document.querySelectorAll("[lexid]"));
+      counter = { current: 0 };
+      createElement = (tag, props = {}, ...children) => {
+        if (!props) props = {};
+        props.lexid = counter.current;
+        let element;
+        let selectMode = false;
+        if (lexElements.length > counter.current) {
+          element = document.querySelector(`[lexid="${props.lexid}"]`);
+          selectMode = true;
+        }
+        if (typeof tag === "string") {
+          if (!selectMode) element = document.createElement(tag);
+          if (props.ref && props.ref instanceof Object) {
+            props.ref.current = element;
+          }
+          for (let [key, value] of Object.entries(props)) {
+            if (key.startsWith("on") && typeof value === "function") element.addEventListener(key.slice(2).toLowerCase(), value);
+            else if (value instanceof State) {
+              value.appendOnChange((newValue) => {
+                props[key] = newValue;
+                element.setAttribute(key, newValue);
+              });
+            } else element.setAttribute(key, value);
+          }
+          children.reduce((acc, ch) => [...acc, ...Array.isArray(ch) ? ch : [ch]], []).forEach((ch, i) => {
+            if (selectMode) {
+              if (ch instanceof State) {
+                const textNode = element.childNodes[i];
+                ch.appendOnChange((newValue) => {
+                  textNode.nodeValue = newValue;
+                });
+              }
+            } else {
+              if (ch instanceof window.Node) element.appendChild(ch);
+              else {
+                const textNode = document.createTextNode(String(ch));
+                element.appendChild(textNode);
+                if (ch instanceof State) {
+                  ch.appendOnChange((newValue) => {
+                    textNode.nodeValue = newValue;
+                  });
+                }
+              }
+            }
+          });
+        } else if (typeof tag === "function") {
+          if (!selectMode) element = tag({ ...props, children });
+          else tag({ ...props, children });
+        }
+        if (typeof tag === "string") counter.current++;
+        return element;
+      };
+      Lex = { createElement, State, useState, useRef };
+      lex_default = Lex;
+    }
+  });
+
+  // views/home/page.jsx
+  var require_page = __commonJS({
+    "views/home/page.jsx"(exports, module) {
+      init_lex();
+      var Counter = () => {
+        const [count, setCount] = lex_default.useState(0);
+        return /* @__PURE__ */ lex_default.createElement("div", null, /* @__PURE__ */ lex_default.createElement("h1", null, "Counter"), /* @__PURE__ */ lex_default.createElement("p", null, count), /* @__PURE__ */ lex_default.createElement("button", { onClick: () => setCount(count + 1) }, "Increment"));
+      };
+      var Home = () => {
+        return /* @__PURE__ */ lex_default.createElement(Counter, null);
+      };
+      module.exports = Home;
+    }
+  });
+
+  // views/layout.jsx
+  var require_layout = __commonJS({
+    "views/layout.jsx"(exports, module) {
+      init_lex();
+      var Layout2 = ({ children }) => {
+        return /* @__PURE__ */ lex_default.createElement("html", null, /* @__PURE__ */ lex_default.createElement("head", null, /* @__PURE__ */ lex_default.createElement("title", null, "Test")), /* @__PURE__ */ lex_default.createElement("body", null, children));
+      };
+      module.exports = Layout2;
+    }
+  });
+
+  // <stdin>
+  init_lex();
+  var import_page = __toESM(require_page());
+  var import_layout = __toESM(require_layout());
+  var main = /* @__PURE__ */ lex_default.createElement(import_layout.default, null, /* @__PURE__ */ lex_default.createElement(import_page.default, null));
+  if (!document.contains(main)) document.documentElement.appendChild(main);
+})();
+</script></head><body lexid="6"><div lexid="3"><h1 lexid="0">Counter</h1><p lexid="1">0</p><button lexid="2">Increment</button></div></body></html>
