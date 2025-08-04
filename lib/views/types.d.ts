@@ -1,32 +1,33 @@
-import { LexpressApp } from "../lex-press/types";
+import { LexpressDevApp } from "../lex-press-dev/types.d.ts";
+import { ServerPropsFunc } from "../server-props-html/types";
 
 export interface Dir
 {
     dirname: string;
     parent: Dir | null;
-    elements: (File | Dir)[];
-    files: File[];
+    page: Page | null;
     dirs: Dir[];
-    forEachFile(callback: (file: File) => void): void;
+    layoutPath: string | null;
+    pagePath: string | null;
+    serverPropsPath: string | null;
+    forEachFile(callback: (file: Page) => void): void;
 }
 export interface DirClass
 {
     new(dirname: string, parent: Dir | null): Dir;
 }
 
-export interface File
+export interface Page
 {
     file: string;
-    type: "static" | "dynamic";
     ext: "jsx" | "html";
     dir: Dir;
     get layout(): string;
     get route(): string;
+    get serverPropsModule(): string | null;
 }
 
-export interface FileClass
+export interface PageClass
 {
-    new(file: string, ext: File["ext"], type: File["type"], dir: Dir): File;
+    new(file: string, ext: Page["ext"], dir: Dir): Page;
 }
-
-export type SetViewsDirFunction = (viewsDir: string, app: LexpressApp) => void;

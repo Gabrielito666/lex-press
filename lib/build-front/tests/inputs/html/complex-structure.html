@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complex Structure</title>
+    <style>
+        .header { background: #f0f0f0; padding: 20px; }
+        .content { margin: 20px; }
+        .footer { background: #333; color: white; padding: 10px; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/about">About</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <main class="content">
+        <article>
+            <h1>Complex HTML Structure</h1>
+            <section>
+                <h2>Introduction</h2>
+                <p>This is a complex HTML document with nested elements.</p>
+            </section>
+            
+            <section>
+                <h2>Features</h2>
+                <div class="feature-grid">
+                    <div class="feature">
+                        <h3>Feature 1</h3>
+                        <p>Description</p>
+                    </div>
+                    <div class="feature">
+                        <h3>Feature 2</h3>
+                        <p>Description</p>
+                    </div>
+                </div>
+            </section>
+        </article>
+        
+        <aside>
+            <h3>Sidebar</h3>
+            <p>Additional content</p>
+        </aside>
+    </main>
+    
+    <footer class="footer">
+        <p>&copy; 2024 Test Company</p>
+    </footer>
+    
+    <script type="module">
+        // Complex script with multiple features
+        class App {
+            constructor() {
+                this.init();
+            }
+            
+            init() {
+                console.log('App initialized');
+                this.bindEvents();
+            }
+            
+            bindEvents() {
+                document.addEventListener('DOMContentLoaded', () => {
+                    console.log('DOM loaded');
+                });
+            }
+        }
+        
+        new App();
+    </script>
+</body>
+</html>

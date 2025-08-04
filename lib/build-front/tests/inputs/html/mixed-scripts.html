@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mixed Scripts Test</title>
+</head>
+<body>
+    <h1>Page with Mixed Scripts</h1>
+    <div id="output"></div>
+    
+    <!-- Regular script (no type) -->
+    <script>
+        var globalVar = 'I am a global variable';
+        console.log('Regular script executed');
+    </script>
+    
+    <!-- Module script inline -->
+    <script type="module">
+        console.log('Module script executed');
+        document.getElementById('output').textContent = 'Hello from inline module';
+    </script>
+    
+    <!-- Module script external -->
+    <script type="module" src="./external-script.js"></script>
+    
+    <!-- Another regular script -->
+    <script>
+        console.log('Second regular script with global:', globalVar);
+    </script>
+</body>
+</html>

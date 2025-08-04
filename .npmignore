@@ -1,2 +1,11 @@
 /node_modules
-/test
+
+# Excluir archivos de test
+*.test.js
+**/*.test.js
+
+# Excluir carpetas llamadas tests/ en cualquier nivel
+tests/
+**/tests/
+
+vitest.config.ts

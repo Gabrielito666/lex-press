@@ -1,5 +1,8 @@
-/// <reference types="./lib/types" />
+/// <reference types="./lib/lex-press-dev/types.d.ts" />
 
-const lexpress = require("./lib/lex-press");
+/**
+ * @type {import("./lib/lex-press-dev/types.d.ts").LexpressDev}
+ */
+const lexpress = process.argv.includes("--build") ? require("./lib/lex-press-builder") : require("./lib/lex-press-dev");
 
 module.exports = lexpress;

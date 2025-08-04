@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Inline Script Test</title>
+</head>
+<body>
+    <h1>Page with Inline Script</h1>
+    <div id="output"></div>
+    
+    <script type="module">
+        console.log('Hello from inline module script');
+        document.getElementById('output').textContent = 'Module script executed';
+    </script>
+</body>
+</html>
