@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { promises as fs } from 'fs';
-import path from 'path';
-const buildFRONT = require('../index.js');
+const { describe, it, beforeEach, afterEach } = require('node:test');
+const assert = require('node:assert');
+const { promises: fs } = require('fs');
+const path = require('path');
+const buildFRONT = require('#lib/build-front');
 
 const testsDir = path.resolve(__dirname);
 const inputsDir = path.join(testsDir, 'inputs', 'jsx');
@@ -35,8 +36,8 @@ describe('buildFRONT.jsx', () => {
             const layout = path.join(inputsDir, 'layout.jsx');
 
             const result = await buildFRONT.jsx(page, layout, false);
-            expect(result).toContain('<html');
-            expect(result).toContain('</html>');
+            assert.ok(result.includes('<html'));
+            assert.ok(result.includes('</html>'));
         });
 
         // Note: buildHTML.standart without layout has specific requirements in Lex
@@ -56,7 +57,7 @@ describe('buildFRONT.jsx', () => {
 
             const result = await buildFRONT.jsx(page, layout, false);
 
-            expect(typeof result).toBe('string');
+            assert.strictEqual(typeof result, 'string');
         });
     });
 });

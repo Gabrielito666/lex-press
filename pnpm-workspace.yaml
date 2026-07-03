@@ -1,0 +1,4 @@
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - '@lek-js/lex@3.0.1'

@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { load } from 'cheerio';
-const buildFRONT = require('../index.js');
+const { describe, it, beforeEach, afterEach } = require('node:test');
+const assert = require('node:assert');
+const { promises: fs } = require('fs');
+const path = require('path');
+const { load } = require('cheerio');
+const buildFRONT = require('#lib/build-front');
 
 const testsDir = path.resolve(__dirname);
 const inputsDir = path.join(testsDir, 'inputs', 'html');
@@ -36,14 +37,14 @@ describe('buildFRONT.html', () => {
 
             const result = await buildFRONT.html(input, false);
 
-            expect(result).toContain('<html');
-            expect(result).toContain('</html>');
+            assert.ok(result.includes('<html'));
+            assert.ok(result.includes('</html>'));
 
             const $ = load(result);
             
-            expect($('title').text()).toBe('Basic HTML');
-            expect($('h1').text()).toBe('Hello World');
-            expect($('script').length).toBe(0); // No scripts should be added
+            assert.strictEqual($('title').text(), 'Basic HTML');
+            assert.strictEqual($('h1').text(), 'Hello World');
+            assert.strictEqual($('script').length, 0); // No scripts should be added
         });
 
         it('should process HTML with inline module script', async () => {
@@ -51,19 +52,19 @@ describe('buildFRONT.html', () => {
 
             const result = await buildFRONT.html(input, false);
 
-            expect(result).toContain('<html');
-            expect(result).toContain('</html>');
+            assert.ok(result.includes('<html'));
+            assert.ok(result.includes('</html>'));
 
             const $ = load(result);
 
             // Should have exactly one script tag (the bundled one)
-            expect($('script').length).toBe(1);
-            expect($('script').attr('type')).toBe('module');
+            assert.strictEqual($('script').length, 1);
+            assert.strictEqual($('script').attr('type'), 'module');
             
             // The bundled script should contain the original code
             const scriptContent = $('script').html();
-            expect(scriptContent).toContain('console.log');
-            expect(scriptContent).toContain('output');
+            assert.ok(scriptContent.includes('console.log'));
+            assert.ok(scriptContent.includes('output'));
         });
 
         it('should process HTML with external script', async () => {
@@ -71,19 +72,19 @@ describe('buildFRONT.html', () => {
 
             const result = await buildFRONT.html(input, false);
 
-            expect(result).toContain('<html');
-            expect(result).toContain('</html>');
+            assert.ok(result.includes('<html'));
+            assert.ok(result.includes('</html>'));
 
             const $ = load(result);
 
             // Should have exactly one script tag (the bundled one)
-            expect($('script').length).toBe(1);
-            expect($('script').attr('type')).toBe('module');
+            assert.strictEqual($('script').length, 1);
+            assert.strictEqual($('script').attr('type'), 'module');
             
             // The bundled script should contain the external script content
             const scriptContent = $('script').html();
-            expect(scriptContent).toContain('Hello from external script');
-            expect(scriptContent).toContain('greet');
+            assert.ok(scriptContent.includes('Hello from external script'));
+            assert.ok(scriptContent.includes('greet'));
         });
 
         it('should process HTML with mixed scripts', async () => {
@@ -91,20 +92,20 @@ describe('buildFRONT.html', () => {
 
             const result = await buildFRONT.html(input, false);
 
-            expect(result).toContain('<html');
-            expect(result).toContain('</html>');
+            assert.ok(result.includes('<html'));
+            assert.ok(result.includes('</html>'));
 
             const $ = load(result);
 
             // Should have exactly one script tag (the bundled one)
-            expect($('script').length).toBe(1);
-            expect($('script').attr('type')).toBe('module');
+            assert.strictEqual($('script').length, 1);
+            assert.strictEqual($('script').attr('type'), 'module');
             
             // The bundled script should contain all script contents
             const scriptContent = $('script').html();
-            expect(scriptContent).toContain('globalVar');
-            expect(scriptContent).toContain('Module script executed');
-            expect(scriptContent).toContain('Hello from external script');
+            assert.ok(scriptContent.includes('globalVar'));
+            assert.ok(scriptContent.includes('Module script executed'));
+            assert.ok(scriptContent.includes('Hello from external script'));
         });
 
         it('should handle HTML with no scripts', async () => {
@@ -112,18 +113,18 @@ describe('buildFRONT.html', () => {
 
             const result = await buildFRONT.html(input, false);
 
-            expect(result).toContain('<html');
-            expect(result).toContain('</html>');
+            assert.ok(result.includes('<html'));
+            assert.ok(result.includes('</html>'));
 
             const $ = load(result);
 
             // Should have no script tags
-            expect($('script').length).toBe(0);
+            assert.strictEqual($('script').length, 0);
             
             // Should preserve all other content
-            expect($('h1').text()).toBe('No Scripts Here');
-            expect($('li').length).toBe(3);
-            expect($('style').length).toBe(1);
+            assert.strictEqual($('h1').text(), 'No Scripts Here');
+            assert.strictEqual($('li').length, 3);
+            assert.strictEqual($('style').length, 1);
         });
     });
 
@@ -135,14 +136,14 @@ describe('buildFRONT.html', () => {
             const resultNormal = await buildFRONT.html(input, false);
 
             // Minified version should be smaller
-            expect(resultMinified.length).toBeLessThan(resultNormal.length);
+            assert.ok(resultMinified.length < resultNormal.length);
 
             // Both should have the same structure
             const $min = load(resultMinified);
             const $norm = load(resultNormal);
             
-            expect($min('script').length).toBe($norm('script').length);
-            expect($min('h1').text()).toBe($norm('h1').text());
+            assert.strictEqual($min('script').length, $norm('script').length);
+            assert.strictEqual($min('h1').text(), $norm('h1').text());
         });
     });
 
@@ -153,19 +154,19 @@ describe('buildFRONT.html', () => {
             // Should not throw error with empty scripts
             const result = await buildFRONT.html(input, false);
 
-            expect(result).toContain('<html');
-            expect(result).toContain('</html>');
+            assert.ok(result.includes('<html'));
+            assert.ok(result.includes('</html>'));
 
             const $ = load(result);
 
             // Should handle empty scripts gracefully
-            expect($('h1').text()).toBe('Page with Empty Script');
+            assert.strictEqual($('h1').text(), 'Page with Empty Script');
             // Original scripts should be removed (regardless if empty)
             // but no bundled script should be added since there's no content
             const $original = load(await fs.readFile(input, 'utf-8'));
             const $result = load(result);
-            expect($original('script').length).toBe(2); // Original had 2 empty scripts
-            expect($result('script').length).toBe(0); // All should be removed
+            assert.strictEqual($original('script').length, 2); // Original had 2 empty scripts
+            assert.strictEqual($result('script').length, 0); // All should be removed
         });
 
         it('should handle complex HTML structure', async () => {
@@ -173,24 +174,24 @@ describe('buildFRONT.html', () => {
 
             const result = await buildFRONT.html(input, false);
 
-            expect(result).toContain('<html');
-            expect(result).toContain('</html>');
+            assert.ok(result.includes('<html'));
+            assert.ok(result.includes('</html>'));
 
             const $ = load(result);
 
             // Should preserve complex structure
-            expect($('header nav ul li').length).toBe(2);
-            expect($('main article section').length).toBe(2);
-            expect($('footer').length).toBe(1);
+            assert.strictEqual($('header nav ul li').length, 2);
+            assert.strictEqual($('main article section').length, 2);
+            assert.strictEqual($('footer').length, 1);
             
             // Should have bundled script
-            expect($('script').length).toBe(1);
-            expect($('script').attr('type')).toBe('module');
+            assert.strictEqual($('script').length, 1);
+            assert.strictEqual($('script').attr('type'), 'module');
             
             const scriptContent = $('script').html();
             // esbuild may transform class syntax, so check for the transformed version
-            expect(scriptContent).toMatch(/class App|var App = class/);
-            expect(scriptContent).toContain('init');
+            assert.ok(/class App|var App = class/.test(scriptContent));
+            assert.ok(scriptContent.includes('init'));
         });
     });
 
@@ -198,7 +199,7 @@ describe('buildFRONT.html', () => {
         it('should throw error for non-existent input file', async () => {
             const input = path.join(inputsDir, 'non-existent.html');
 
-            await expect(buildFRONT.html(input, false)).rejects.toThrow();
+            await assert.rejects(buildFRONT.html(input, false));
         });
 
         it('should throw error for script with non-existent src', async () => {
@@ -217,7 +218,7 @@ describe('buildFRONT.html', () => {
             
             await fs.writeFile(tempInput, invalidHtml);
 
-            await expect(buildFRONT.html(tempInput, false)).rejects.toThrow();
+            await assert.rejects(buildFRONT.html(tempInput, false));
         });
     });
 });

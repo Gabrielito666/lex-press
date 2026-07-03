@@ -8,9 +8,9 @@ app.get("/", (req, res) =>
     res.send("Hello World");
 });
 
-app.public(path.join(process.cwd(), "lib", "lex-press-builder", "tests", "public-test"));
+app.public(path.join(process.cwd(), "test", "lex-press-builder", "public-test"));
 
-app.views(path.join(process.cwd(), "lib", "lex-press-builder", "tests", "views-test"));
+app.views(path.join(process.cwd(), "test", "lex-press-builder", "views-test"));
 
 app.listen(3001, () =>
 {

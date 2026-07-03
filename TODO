@@ -1,0 +1,11 @@
+- Mejorar un poco el orden para los assets en dev
+- algo como asset-handler (asset-handler.add()) o similar. junto con routes-handler hay que generar los middelwares en la librería de producción
+- Crear la librería de producción
+- implementar la librería de bundle
+- documentar.
+
+Me interesa que quede claro que si bien se puede usar import imgae from "./image.png"; y todo bien. Lo mejor es limitar el uso execibo de imports de archivos no porque no se pueda... sino porque es múcho más simple y stuto utilizar la carpeta public.
+
+También decir que queda como responsabilidad del dev evitar importar archivos desde public porque así tendras un server que sirve dos veces el archivo... uno en ./archivo.png y otro en ./lex-assets/archivo-HDF3E.png
+
+La idea de usar esos imports es para componentes de librerías que incluyan un ícono por ejemplo.

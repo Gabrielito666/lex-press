@@ -1,5 +1,6 @@
-import { describe, it, expect, test } from 'vitest';
-const routesHandler = require('./index.js');
+const { describe, it, test } = require('node:test');
+const assert = require('node:assert');
+const routesHandler = require('#lib/routes-handler');
 
 describe('Routes Handler', () =>
 {
@@ -17,10 +18,10 @@ describe('Routes Handler', () =>
                 serverProps: serverProps
             });
             
-            expect(routeDef.ext).toBe("jsx");
-            expect(routeDef.page).toBe("home.jsx");
-            expect(routeDef.layout).toBe("layout.jsx");
-            expect(routeDef.serverProps).toBe(serverProps);
+            assert.strictEqual(routeDef.ext, "jsx");
+            assert.strictEqual(routeDef.page, "home.jsx");
+            assert.strictEqual(routeDef.layout, "layout.jsx");
+            assert.strictEqual(routeDef.serverProps, serverProps);
         });
 
         test("should create RouteDef with null layout", () =>
@@ -32,10 +33,10 @@ describe('Routes Handler', () =>
                 serverProps: null
             });
             
-            expect(routeDef.ext).toBe("html");
-            expect(routeDef.page).toBe("about.html");
-            expect(routeDef.layout).toBe(null);
-            expect(routeDef.serverProps).toBe(null);
+            assert.strictEqual(routeDef.ext, "html");
+            assert.strictEqual(routeDef.page, "about.html");
+            assert.strictEqual(routeDef.layout, null);
+            assert.strictEqual(routeDef.serverProps, null);
         });
 
         test("should set property using set method", () =>
@@ -50,7 +51,7 @@ describe('Routes Handler', () =>
             const newServerProps = async(req) => ({ data: "new" });
             routeDef.set("serverProps", newServerProps);
             
-            expect(routeDef.serverProps).toBe(newServerProps);
+            assert.strictEqual(routeDef.serverProps, newServerProps);
         });
 
         test("should get property using get method", () =>
@@ -62,10 +63,10 @@ describe('Routes Handler', () =>
                 serverProps: null
             });
             
-            expect(routeDef.get("ext")).toBe("jsx");
-            expect(routeDef.get("page")).toBe("home.jsx");
-            expect(routeDef.get("layout")).toBe("layout.jsx");
-            expect(routeDef.get("serverProps")).toBe(null);
+            assert.strictEqual(routeDef.get("ext"), "jsx");
+            assert.strictEqual(routeDef.get("page"), "home.jsx");
+            assert.strictEqual(routeDef.get("layout"), "layout.jsx");
+            assert.strictEqual(routeDef.get("serverProps"), null);
         });
 
         test("should set and get different property types", () =>
@@ -83,9 +84,9 @@ describe('Routes Handler', () =>
             routeDef.set("layout", null);
             
             // Verify changes
-            expect(routeDef.get("ext")).toBe("html");
-            expect(routeDef.get("page")).toBe("new-page.html");
-            expect(routeDef.get("layout")).toBe(null);
+            assert.strictEqual(routeDef.get("ext"), "html");
+            assert.strictEqual(routeDef.get("page"), "new-page.html");
+            assert.strictEqual(routeDef.get("layout"), null);
         });
     });
 
@@ -95,10 +96,10 @@ describe('Routes Handler', () =>
         {
             const routes = routesHandler();
             
-            expect(routes).toBeDefined();
-            expect(typeof routes.setRoute).toBe('function');
-            expect(typeof routes.getRoute).toBe('function');
-            expect(typeof routes.forEachRoute).toBe('function');
+            assert.ok(routes !== undefined);
+            assert.strictEqual(typeof routes.setRoute, 'function');
+            assert.strictEqual(typeof routes.getRoute, 'function');
+            assert.strictEqual(typeof routes.forEachRoute, 'function');
         });
 
         test("should set and get route", () =>
@@ -114,10 +115,10 @@ describe('Routes Handler', () =>
             routes.setRoute("/home", routeProps);
             const retrieved = routes.getRoute("/home");
             
-            expect(retrieved.ext).toBe("jsx");
-            expect(retrieved.page).toBe("home.jsx");
-            expect(retrieved.layout).toBe("layout.jsx");
-            expect(retrieved.serverProps).toBe(null);
+            assert.strictEqual(retrieved.ext, "jsx");
+            assert.strictEqual(retrieved.page, "home.jsx");
+            assert.strictEqual(retrieved.layout, "layout.jsx");
+            assert.strictEqual(retrieved.serverProps, null);
         });
 
         test("should return null for non-existent route", () =>
@@ -125,7 +126,7 @@ describe('Routes Handler', () =>
             const routes = routesHandler();
             const result = routes.getRoute("/non-existent");
             
-            expect(result).toBe(undefined);
+            assert.strictEqual(result, undefined);
         });
 
         test("should set multiple routes", () =>
@@ -151,10 +152,10 @@ describe('Routes Handler', () =>
             const homeRoute = routes.getRoute("/home");
             const aboutRoute = routes.getRoute("/about");
             
-            expect(homeRoute.ext).toBe("jsx");
-            expect(homeRoute.page).toBe("home.jsx");
-            expect(aboutRoute.ext).toBe("html");
-            expect(aboutRoute.page).toBe("about.html");
+            assert.strictEqual(homeRoute.ext, "jsx");
+            assert.strictEqual(homeRoute.page, "home.jsx");
+            assert.strictEqual(aboutRoute.ext, "html");
+            assert.strictEqual(aboutRoute.page, "about.html");
         });
 
         test("should iterate over all routes with forEachRoute", () =>
@@ -190,15 +191,15 @@ describe('Routes Handler', () =>
                 collected.push({ route, routeDef });
             });
             
-            expect(collected).toHaveLength(3);
-            expect(collected.some(item => item.route === "/home")).toBe(true);
-            expect(collected.some(item => item.route === "/about")).toBe(true);
-            expect(collected.some(item => item.route === "/contact")).toBe(true);
+            assert.strictEqual(collected.length, 3);
+            assert.ok(collected.some(item => item.route === "/home"));
+            assert.ok(collected.some(item => item.route === "/about"));
+            assert.ok(collected.some(item => item.route === "/contact"));
             
             // Verify route properties
             const homeRoute = collected.find(item => item.route === "/home").routeDef;
-            expect(homeRoute.ext).toBe("jsx");
-            expect(homeRoute.page).toBe("home.jsx");
+            assert.strictEqual(homeRoute.ext, "jsx");
+            assert.strictEqual(homeRoute.page, "home.jsx");
         });
 
         test("should handle empty routes in forEachRoute", () =>
@@ -211,7 +212,7 @@ describe('Routes Handler', () =>
                 collected.push({ route, routeDef });
             });
             
-            expect(collected).toHaveLength(0);
+            assert.strictEqual(collected.length, 0);
         });
 
         test("should overwrite existing route", () =>
@@ -232,11 +233,11 @@ describe('Routes Handler', () =>
             };
             
             routes.setRoute("/home", originalRouteProps);
-            expect(routes.getRoute("/home").ext).toBe("jsx");
+            assert.strictEqual(routes.getRoute("/home").ext, "jsx");
             
             routes.setRoute("/home", newRouteProps);
-            expect(routes.getRoute("/home").ext).toBe("html");
-            expect(routes.getRoute("/home").page).toBe("new-home.html");
+            assert.strictEqual(routes.getRoute("/home").ext, "html");
+            assert.strictEqual(routes.getRoute("/home").page, "new-home.html");
         });
 
         test("should handle complex serverProps functions", () =>
@@ -262,8 +263,8 @@ describe('Routes Handler', () =>
             routes.setRoute("/profile", routeProps);
             
             const retrieved = routes.getRoute("/profile");
-            expect(retrieved.serverProps).toBe(serverProps);
-            expect(typeof retrieved.serverProps).toBe('function');
+            assert.strictEqual(retrieved.serverProps, serverProps);
+            assert.strictEqual(typeof retrieved.serverProps, 'function');
         });
 
         test("should map over all routes with mapRoutes", () =>
@@ -296,10 +297,10 @@ describe('Routes Handler', () =>
             // Map routes to get just the page names
             const pageNames = routes.mapRoutes((route, routeDef) => routeDef.page);
             
-            expect(pageNames).toHaveLength(3);
-            expect(pageNames).toContain("home.jsx");
-            expect(pageNames).toContain("about.html");
-            expect(pageNames).toContain("contact.jsx");
+            assert.strictEqual(pageNames.length, 3);
+            assert.ok(pageNames.includes("home.jsx"));
+            assert.ok(pageNames.includes("about.html"));
+            assert.ok(pageNames.includes("contact.jsx"));
         });
 
         test("should return empty array when mapping over empty routes", () =>
@@ -308,8 +309,8 @@ describe('Routes Handler', () =>
             
             const result = routes.mapRoutes((route, routeDef) => routeDef.page);
             
-            expect(result).toEqual([]);
-            expect(result).toHaveLength(0);
+            assert.deepStrictEqual(result, []);
+            assert.strictEqual(result.length, 0);
         });
     });
 
@@ -345,19 +346,19 @@ describe('Routes Handler', () =>
             routes.setRoute("/dashboard", dashboardRouteProps);
             
             // Verify all routes exist
-            expect(routes.getRoute("/").ext).toBe("jsx");
-            expect(routes.getRoute("/api").ext).toBe("html");
-            expect(routes.getRoute("/dashboard").ext).toBe("jsx");
+            assert.strictEqual(routes.getRoute("/").ext, "jsx");
+            assert.strictEqual(routes.getRoute("/api").ext, "html");
+            assert.strictEqual(routes.getRoute("/dashboard").ext, "jsx");
             
             // Verify route count via iteration
-            const routeCount = { current: 0 };
-            routes.forEachRoute(() => routeCount.current++);
-            expect(routeCount.current).toBe(3);
+            let routeCount = 0;
+            routes.forEachRoute(() => routeCount++);
+            assert.strictEqual(routeCount, 3);
             
             // Verify route modifications
             const dashboardRoute = routes.getRoute("/dashboard");
             dashboardRoute.set("layout", "new-admin-layout.jsx");
-            expect(routes.getRoute("/dashboard").get("layout")).toBe("new-admin-layout.jsx");
+            assert.strictEqual(routes.getRoute("/dashboard").get("layout"), "new-admin-layout.jsx");
         });
     });
 });

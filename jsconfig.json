@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"checkJs": true,
+		"allowJs": true,
+		"esModuleInterop": true,
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"types": ["node"],
+		"allowSyntheticDefaultImports": true,
+		"target": "ES2022",
+		"baseUrl": ".",
+		"skipLibCheck": true,
+		"strict": true,
+		"paths" : {
+			"baseUrl": ["."],
+			"#lib/*": ["./lib/*/index.js"]
+		}
+	}
+}

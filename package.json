@@ -2,21 +2,24 @@
   "name": "lex-press",
   "version": "3.0.1",
   "main": "index.js",
+  "imports": {
+    "#lib/*": "./lib/*/index.js"
+  },
   "author": "Gabriel Farías Ravanal",
   "license": "ISC",
   "description": "Minimalist framework for HTML and JSX with LEX, built as an Express wrapper with automatic routing and server-side props",
-  "types": "./lib/lex-press-dev/types.d.ts",
+  "types": "./lib/lex-press-dev/index.js",
   "scripts": {
-    "test": "vitest run"
+    "test": "node --test $(find test -name '*.test.js' -type f)"
   },
   "dependencies": {
-    "@lek-js/lex": "^2.0.0",
+    "@lek-js/lex": "3.0.1",
     "cheerio": "^1.1.2",
     "cookie-parser": "^1.4.6",
+    "esbuild": "^0.25.12",
     "express": "^4.21.0"
   },
   "devDependencies": {
-    "vitest": "^3.2.4",
     "lex-press": "file:."
   }
 }
