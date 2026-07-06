@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@lek-js/lex':
-        specifier: 3.0.1
-        version: 3.0.1
+        specifier: 3.0.2
+        version: 3.0.2
       cheerio:
         specifier: ^1.1.2
         version: 1.2.0
@@ -217,8 +217,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@lek-js/lex@3.0.1':
-    resolution: {integrity: sha512-CrVqnPQrJ6Y6ckt2SRcK3sOzO7VbDSL2KJQBwqxlVA/tfabS1UQ1nmByBrrDj7GLdFvnhL8Yl/tO1tMDVIip9A==}
+  '@lek-js/lex@3.0.2':
+    resolution: {integrity: sha512-9ito4WD6qlEaUAORixTimL58fAAqJ41WV976JtsimpYkyg4Jc8ClyucuWsMU0gMZh/sFCp+s6L9SOZeKWRH12w==}
 
   accepts@1.3.8:
     resolution: {integrity: sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw==}
@@ -798,7 +798,7 @@ snapshots:
   '@esbuild/win32-x64@0.25.12':
     optional: true
 
-  '@lek-js/lex@3.0.1':
+  '@lek-js/lex@3.0.2':
     dependencies:
       esbuild: 0.25.12
       jsdom: 26.1.0
@@ -1158,7 +1158,7 @@ snapshots:
 
   'lex-press@file:':
     dependencies:
-      '@lek-js/lex': 3.0.1
+      '@lek-js/lex': 3.0.2
       cheerio: 1.2.0
       cookie-parser: 1.4.7
       esbuild: 0.25.12
