@@ -1,4 +1,4 @@
-const lexpress = require("#lib/lex-press-dev");
+const lexpress = require("lex-press");
 const path = require("path");
 
 const app = lexpress();
