@@ -1,7 +1,11 @@
 {
   "name": "lex-press",
-  "version": "3.0.1",
-  "main": "index.js",
+  "version": "3.0.2",
+  "exports": {
+    ".": {
+       "require": "./lib/lex-press/index.js"
+    }
+  },
   "imports": {
     "#lib/*": "./lib/*/index.js"
   },
@@ -10,10 +14,11 @@
   "description": "Minimalist framework for HTML and JSX with LEX, built as an Express wrapper with automatic routing and server-side props",
   "types": "./lib/lex-press-dev/index.js",
   "scripts": {
-    "test": "node --test $(find test -name '*.test.js' -type f)"
+    "test": "node --test $(find test -name '*.test.js' -type f)",
+    "build-fixture": "node fixtures/dev/index.js --build"
   },
   "dependencies": {
-    "@lek-js/lex": "3.0.2",
+    "@lek-js/lex": "3.0.3",
     "cheerio": "^1.1.2",
     "cookie-parser": "^1.4.6",
     "esbuild": "^0.25.12",

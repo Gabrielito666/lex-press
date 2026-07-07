@@ -3,3 +3,4 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - '@lek-js/lex@3.0.1'
   - '@lek-js/lex@3.0.2'
+  - '@lek-js/lex@3.0.3'

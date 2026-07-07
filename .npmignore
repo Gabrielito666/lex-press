@@ -8,4 +8,4 @@
 tests/
 **/tests/
 
-vitest.config.ts
+.lex-press-app
