@@ -51,39 +51,7 @@ app.html("/home", "./pages/index.html");
 ```
 
 Si el HTML incluye scripts src o inline, este se compilará automáticamente resultando en un único HTML con scripts inline.
-
-Este método retorna un objeto con el método `serverProps`. Este es un método que nos permite declarar una función (sync o async) de serverProps:
-
-```js
-app.html("/home", "./pages/index.html").serverProps((req) =>
-{
-    return {
-        title: "Hola mundo desde el server"
-    };
-});
-```
-
-```html
-<!--./pages/index.html-->
-<body>
-    <h1>__SERVER_PROPS.title__</h1>
-</body>
-```
-
-Esto reemplazará el placeholder `__SERVER_PROPS.title__` por el `(valor de retorno de la función serverProps).title`:
-
-```html
-<!--Resultado final-->
-<body>
-    <h1>Hola mundo desde el server</h1>
-</body>
-```
-
-Esto es útil para contenido preprocesado. Evidentemente hay que usarlo con cuidado de no enviar al cliente información sensible.
-
-El texto se escapará automáticamente, por lo que no se puede inyectar HTML, solo texto plano.
-
-La función recibe `req` por si deseas utilizarlo.
+El bundle del javascript soporta imports de archivos css o module.css, archivos txt, json y files. Por lo que puedes importar imágenes y obtener un src. El css se procesa y se añade a los archivos html inline.
 
 ## JSX
 
@@ -118,25 +86,6 @@ const Page = () =>
 export default Page;
 ```
 
-Este método, al igual que el anterior, retorna un objeto con el método `serverProps`:
-
-```js
-app.jsx("/home", "./pages/layout.jsx", "./pages/page.jsx").serverProps((req) =>
-{
-    return {
-        title: "Hola mundo desde el server"
-    };
-});
-```
-
-```jsx
-const Page = () =>
-{
-    return <h1>__SERVER_PROPS.title__</h1>;
-};
-export default Page;
-```
-
 ## Views
 
 El método `views` declara una carpeta de enrutamiento automático al estilo de Vite o Next.js:
@@ -153,31 +102,13 @@ views/
 ├── about/
 │   └── page.html
 └── contact/
-    ├── page.jsx
-    └── server-props.js
+    └── page.jsx
 ```
 
 Un esquema como este serviría los elementos page.
 
 - Si tenemos `page.html`, se sirve directamente
 - Si es `.jsx`, se utiliza el layout más próximo retrocediendo en los directorios
-- Si se incluye un archivo `server-props.js`, ese código se utilizará del lado del servidor como argumento server props:
-
-```js
-const serverProps = (req) =>
-{
-    return {
-        title: "Hola mundo desde el server"
-    };
-};
-module.exports = serverProps;
-```
-
-Los archivos `page` y `layout` usan ES modules y los `server-props.js` usan CommonJS.
-
-## Listen
-
-Esto envuelve el `listen` de Express pero con un paso anterior. En modo desarrollo precompilará y servirá los archivos resultantes. En modo producción servirá los archivos asumiendo que ya están compilados.
 
 ### Importante
 
@@ -192,8 +123,7 @@ El modo por defecto del framework es desarrollo, por lo que puedes ejecutar el s
 ```bash
 node index.js
 ```
-
-Pronto incluiré la función de hot-reload para frontend y backend. Por ahora lo mejor es usar nodemon:
+o con nodemon para hot-reload
 
 ```bash
 nodemon --watch ./ --ext js,jsx,ts,tsx,json,html,css --exec "node index.js"
@@ -207,7 +137,7 @@ Para compilar el servidor, lo único que debes hacer es añadir la flag `--build
 node index.js --build
 ```
 
-Esto compilará el servidor de producción en `.lexpress-server.js`.
+Esto compilará el servidor de producción en `.lex-press-app/server.js`.
 
 Si tu proyecto utiliza librerías no bundleables (sea porque usan binarios o cualquier otro motivo), podemos pasar un listado de dependencias externas:
 
@@ -215,16 +145,29 @@ Si tu proyecto utiliza librerías no bundleables (sea porque usan binarios o cua
 node index.js --build --external modulo-externo1 modulo-externo2
 ```
 
+De hecho puedes utilizar una serie de flags de esbuild en caso de requerir personalizar el export:
+- build
+- format
+- platform
+- target
+- bundle
+- minify
+- sourcemap
+- treeShaking
+- external
+- tsconfig
+
 ### Importante
 
 Cuidado con usar `__dirname`. Esto compila todo a un bundle por lo que las rutas relativas cambiarían... usa `process.cwd()`.
 
 # Producción
 
-Una vez bundleado, puedes ejecutar tu servidor desde el archivo `.lexpress-server`:
+Una vez bundleado, puedes ejecutar tu servidor desde el archivo `.lex-press-app/server.js`:
 
 ```bash
-node .lexpress-server
+node .lex-press-app/server.js
 ```
+La carpeta .lex-press-app además contiene los archivos html compilados, assets y copias de carpetas públicas que hayas anexado al proyecto con `app.public()`. Por lo tanto esta carpeta sola puede contener todo lo necesario en un despliegue que solo utiliza `app.public()` y `app.views()`.
 
-Este es un archivo autónomo (a menos que se hayan puesto módulos external), por lo que puedes aislarlo en un contenedor. Ya no se necesita otro archivo excepto la carpeta `public`. Si usas el método `public`, debes mantener esta carpeta accesible.
+El archivo de servidor se debe ejecutar solo desde fuera de la carpeta.
