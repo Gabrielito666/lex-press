@@ -1,14 +1,50 @@
 /**
  * @file
  * @source ./test/unit/lex-press-builder/index.test.js
- * @description Tests unitarios para lib/lex-press-builder
+ * @description Tests unitarios para lib/lex-press-builder. esbuild expone su API como getters
+ * no configurables (exports generado con __toCommonJS), inmunes a t.mock.method, por eso
+ * se reemplaza su entrada en el cache de require por un stub con "build" como propiedad
+ * plana ANTES de cargar lib/lex-press-builder, y cada test la remockea con t.mock.method.
  */
 
 const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const esbuild = require("esbuild");
+
+/**
+ * @typedef {{
+ *	build: (options: import("esbuild").BuildOptions) => Promise<import("esbuild").BuildResult>;
+ * }} IEsbuild
+ */
+
+/**
+ * Se requiere primero únicamente para poblar el cache de require. Su exports real queda
+ * reemplazado abajo por el stub esbuild, así lib/lex-press-builder captura el stub al hacer
+ * su propio require("esbuild").
+ *
+ * @type {typeof import("esbuild")}
+ */
+const esbuildReal = require("esbuild");
+
+/**
+ * Stub de esbuild con "build" como propiedad plana y redefinible. Reemplaza el exports
+ * real (getters no configurables, inmunes a t.mock.method) en el cache de require;
+ * cada test la remockea con t.mock.method.
+ *
+ * @type {IEsbuild}
+ */
+const esbuild = {
+	build: async() =>
+	{
+		throw new Error("esbuild.build debe mockearse en cada test");
+	}
+};
+
+/** @type {NodeModule} */
+const esbuildModule = require.cache[require.resolve("esbuild")];
+esbuildModule.exports = esbuild;
+
 const buildFRONT = require("#lib/build-front");
 
 const MODULE_ID = "#lib/lex-press-builder";

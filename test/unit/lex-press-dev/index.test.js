@@ -156,6 +156,7 @@ describe("lex-press-dev", () =>
 	it("jsx: build fallido responde el HTML de error de buildErrorHtml", async(t) =>
 	{
 		t.mock.method(buildFRONT, "jsx", async() => ({ error: new Error("boom"), htmlText: null, assets: null }));
+		t.mock.method(console, "error", () => {});
 
 		const app = lexpress();
 		app.jsx("/hello", "/virtual/page.jsx", "/virtual/layout.jsx");
