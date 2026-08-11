@@ -5,6 +5,10 @@
  * no configurables (exports generado con __toCommonJS), inmunes a t.mock.method, por eso
  * se reemplaza su entrada en el cache de require por un stub con "build" como propiedad
  * plana ANTES de cargar lib/lex-press-builder, y cada test la remockea con t.mock.method.
+ * OJO: los mocks se configuran ANTES de loadBuilder porque el constructor de BuilderQueue
+ * ejecuta el init EAGER (fsSync.existsSync / fs.rm reales) durante el require del módulo;
+ * si se carga el módulo primero, el init borra .lex-press-app de verdad antes de que los
+ * mocks existan (rompe rm.mock.calls y los tests de producción que leen .lex-press-app).
  */
 
 const { describe, it } = require("node:test");
@@ -97,7 +101,12 @@ const setupMocks = (t) =>
 	t.mock.method(console, "log", () => {});
 	t.mock.method(console, "warn", () => {});
 	t.mock.method(console, "error", () => {});
-	t.mock.method(fs, "readFileSync", () => "process.cwd()");
+	// OJO: mockear fs.readFileSync en crudo rompe el loader CJS de Node, que lo usa
+	// internamente para leer el source de cada módulo (require devolvería {}). Por eso
+	// el mock delega al real salvo para server.js, el único path que el builder lee en listen.
+	const realReadFileSync = fs.readFileSync.bind(fs);
+	t.mock.method(fs, "readFileSync", (filePath, ...args) =>
+		String(filePath).endsWith("server.js") ? "process.cwd()" : realReadFileSync(filePath, ...args));
 	t.mock.method(fs, "existsSync", () => true);
 
 	return { rm, mkdir, cp, writeFile, build, exit, html, jsx };
@@ -117,8 +126,8 @@ describe("lexpress-builder", () =>
 		const originalArgv = process.argv;
 		try
 		{
-			const app = loadBuilder([...originalArgv, "--format", "esm"]);
 			const mocks = setupMocks(t);
+			const app = loadBuilder([...originalArgv, "--format", "esm"]);
 
 			app.html("/", "/v/index.html");
 			await app.listen(0, () => {});
@@ -142,8 +151,8 @@ describe("lexpress-builder", () =>
 		const originalArgv = process.argv;
 		try
 		{
-			const app = loadBuilder([...originalArgv]);
 			const mocks = setupMocks(t);
+			const app = loadBuilder([...originalArgv]);
 
 			app.html("/", "/v/index.html");
 			await app.listen(0, () => {});
@@ -194,8 +203,8 @@ describe("lexpress-builder", () =>
 		const originalArgv = process.argv;
 		try
 		{
-			const app = loadBuilder([...originalArgv, "--bundle", "--minify"]);
 			const mocks = setupMocks(t);
+			const app = loadBuilder([...originalArgv, "--bundle", "--minify"]);
 
 			app.html("/", "/v/index.html");
 			await app.listen(0, () => {});
@@ -222,8 +231,8 @@ describe("lexpress-builder", () =>
 		const originalArgv = process.argv;
 		try
 		{
-			const app = loadBuilder([...originalArgv]);
 			const mocks = setupMocks(t);
+			const app = loadBuilder([...originalArgv]);
 
 			app.jsx("/about", "/v/about.jsx", "/v/layout.jsx");
 			await app.listen(0, () => {});
@@ -249,8 +258,8 @@ describe("lexpress-builder", () =>
 		const originalArgv = process.argv;
 		try
 		{
-			const app = loadBuilder([...originalArgv]);
 			const mocks = setupMocks(t);
+			const app = loadBuilder([...originalArgv]);
 
 			app.html("/home", "/v/home.html");
 			await app.listen(0, () => {});
@@ -275,8 +284,8 @@ describe("lexpress-builder", () =>
 		const originalArgv = process.argv;
 		try
 		{
-			const app = loadBuilder([...originalArgv]);
 			const mocks = setupMocks(t);
+			const app = loadBuilder([...originalArgv]);
 
 			app.public("/v/pub1");
 			app.public("/v/pub2");
@@ -302,8 +311,8 @@ describe("lexpress-builder", () =>
 		const originalArgv = process.argv;
 		try
 		{
-			const app = loadBuilder([...originalArgv]);
 			const mocks = setupMocks(t);
+			const app = loadBuilder([...originalArgv]);
 
 			app.html("/home", "/v/home.html");
 			await app.listen(0, () => {});
@@ -312,10 +321,16 @@ describe("lexpress-builder", () =>
 			assert.equal(mocks.rm.mock.calls[0].arguments[0], OUT_DIR);
 			assert.deepEqual(mocks.rm.mock.calls[0].arguments[1], { recursive: true, force: true });
 
-			assert.equal(mocks.mkdir.mock.calls[0].arguments[0], OUT_DIR);
-			assert.equal(mocks.mkdir.mock.calls[1].arguments[0], OUT_PUBLIC);
-			assert.equal(mocks.mkdir.mock.calls[2].arguments[0], OUT_VIEWS);
-			assert.equal(mocks.mkdir.mock.calls[3].arguments[0], OUT_ASSETS);
+			// La queue ejecuta los jobs en paralelo (intercalados en microtasks), por lo que
+			// el orden de los mkdir del init no está garantizado frente a los de cada view.
+			// Se verifica el CONJUNTO de directorios creados, no el orden.
+			for(const dir of [OUT_DIR, OUT_PUBLIC, OUT_VIEWS, OUT_ASSETS])
+			{
+				assert.ok(
+					mocks.mkdir.mock.calls.some(call => call.arguments[0] === dir),
+					`mkdir debe crear ${dir}`
+				);
+			}
 		}
 		finally
 		{
@@ -333,8 +348,8 @@ describe("lexpress-builder", () =>
 		const originalArgv = process.argv;
 		try
 		{
-			const app = loadBuilder([...originalArgv]);
 			const mocks = setupMocks(t);
+			const app = loadBuilder([...originalArgv]);
 
 			app.public("/v/pub1");
 			app.public("/v/pub2");
@@ -362,8 +377,8 @@ describe("lexpress-builder", () =>
 		const originalArgv = process.argv;
 		try
 		{
-			const app = loadBuilder([...originalArgv]);
 			const mocks = setupMocks(t);
+			const app = loadBuilder([...originalArgv]);
 
 			app.html("/home", "/v/home.html");
 			app.jsx("/about", "/v/about.jsx", "/v/layout.jsx");
@@ -401,8 +416,8 @@ describe("lexpress-builder", () =>
 		const originalArgv = process.argv;
 		try
 		{
-			const app = loadBuilder([...originalArgv]);
 			const mocks = setupMocks(t);
+			const app = loadBuilder([...originalArgv]);
 
 			app.html("/", "/v/index.html");
 			await app.listen(0, () => {});
@@ -435,7 +450,6 @@ describe("lexpress-builder", () =>
 		const originalArgv = process.argv;
 		try
 		{
-			const app = loadBuilder([...originalArgv]);
 			const rm = t.mock.method(fs.promises, "rm", async () => {});
 			t.mock.method(fs.promises, "mkdir", async () => {});
 			t.mock.method(fs.promises, "cp", async () => {});
@@ -452,8 +466,12 @@ describe("lexpress-builder", () =>
 				warnings: [],
 			}));
 			t.mock.method(buildFRONT, "jsx", async () => ({ ...CLEAN_HTML_OUTPUT }));
-			t.mock.method(fs, "readFileSync", () => "process.cwd()");
+			const realReadFileSync = fs.readFileSync.bind(fs);
+			t.mock.method(fs, "readFileSync", (filePath, ...args) =>
+				String(filePath).endsWith("server.js") ? "process.cwd()" : realReadFileSync(filePath, ...args));
 			t.mock.method(fs, "existsSync", () => true);
+
+			const app = loadBuilder([...originalArgv]);
 
 			app.html("/home", "/v/home.html");
 			await app.listen(0, () => {});
