@@ -53,10 +53,24 @@ const buildFRONT = require("#lib/build-front");
 
 const MODULE_ID = "#lib/lex-press-builder";
 
+/**
+ * Borra del cache los 3 módulos del pipeline para que al re-requerir se re-ejecuten:
+ * builder-options parsea argv al cargar y builder-helpers captura las dependencias al
+ * cargar, así que ambos deben invalidarse junto con lexpress-builder (si no, el argv de
+ * un test anterior queda congelado en el cache).
+ * @returns {void}
+ */
+const resetBuilderCache = () =>
+{
+	delete require.cache[require.resolve(MODULE_ID)];
+	delete require.cache[require.resolve("#lib/builder-options")];
+	delete require.cache[require.resolve("#lib/builder-helpers")];
+};
+
 const OUT_DIR = path.resolve(process.cwd(), ".lex-press-app");
-const OUT_PUBLIC = path.resolve(OUT_DIR, "public");
-const OUT_VIEWS = path.resolve(OUT_DIR, "views");
-const OUT_ASSETS = path.resolve(OUT_DIR, "assets");
+const OUT_PUBLIC = path.resolve(OUT_DIR, "0", "public");
+const OUT_VIEWS = path.resolve(OUT_DIR, "0", "views");
+const OUT_ASSETS = path.resolve(OUT_DIR, "0", "assets");
 
 /**
  * @typedef {import("#lib/lex-press-dev").LexpressDevApp} LexpressApp
@@ -80,7 +94,7 @@ const CLEAN_HTML_OUTPUT = {
 const loadBuilder = (argv) =>
 {
 	process.argv = argv;
-	delete require.cache[require.resolve(MODULE_ID)];
+	resetBuilderCache();
 	return require(MODULE_ID)();
 };
 
@@ -138,7 +152,7 @@ describe("lexpress-builder", () =>
 		finally
 		{
 			process.argv = originalArgv;
-			delete require.cache[require.resolve(MODULE_ID)];
+			resetBuilderCache();
 		}
 	});
 
@@ -163,7 +177,7 @@ describe("lexpress-builder", () =>
 		finally
 		{
 			process.argv = originalArgv;
-			delete require.cache[require.resolve(MODULE_ID)];
+			resetBuilderCache();
 		}
 	});
 
@@ -176,7 +190,7 @@ describe("lexpress-builder", () =>
 		try
 		{
 			process.argv = [...originalArgv, "--format", "invalid"];
-			delete require.cache[require.resolve(MODULE_ID)];
+			resetBuilderCache();
 
 			assert.throws(
 				() => { require(MODULE_ID); },
@@ -190,7 +204,7 @@ describe("lexpress-builder", () =>
 		finally
 		{
 			process.argv = originalArgv;
-			delete require.cache[require.resolve(MODULE_ID)];
+			resetBuilderCache();
 		}
 	});
 
@@ -218,7 +232,7 @@ describe("lexpress-builder", () =>
 		finally
 		{
 			process.argv = originalArgv;
-			delete require.cache[require.resolve(MODULE_ID)];
+			resetBuilderCache();
 		}
 	});
 
@@ -245,7 +259,7 @@ describe("lexpress-builder", () =>
 		finally
 		{
 			process.argv = originalArgv;
-			delete require.cache[require.resolve(MODULE_ID)];
+			resetBuilderCache();
 		}
 	});
 
@@ -271,7 +285,7 @@ describe("lexpress-builder", () =>
 		finally
 		{
 			process.argv = originalArgv;
-			delete require.cache[require.resolve(MODULE_ID)];
+			resetBuilderCache();
 		}
 	});
 
@@ -298,7 +312,7 @@ describe("lexpress-builder", () =>
 		finally
 		{
 			process.argv = originalArgv;
-			delete require.cache[require.resolve(MODULE_ID)];
+			resetBuilderCache();
 		}
 	});
 
@@ -335,7 +349,7 @@ describe("lexpress-builder", () =>
 		finally
 		{
 			process.argv = originalArgv;
-			delete require.cache[require.resolve(MODULE_ID)];
+			resetBuilderCache();
 		}
 	});
 
@@ -357,14 +371,14 @@ describe("lexpress-builder", () =>
 
 			assert.equal(mocks.cp.mock.calls.length, 2);
 			assert.equal(mocks.cp.mock.calls[0].arguments[0], "/v/pub1");
-			assert.ok(String(mocks.cp.mock.calls[0].arguments[1]).endsWith(".lex-press-app/public/0"));
+			assert.ok(String(mocks.cp.mock.calls[0].arguments[1]).endsWith(".lex-press-app/0/public/0"));
 			assert.equal(mocks.cp.mock.calls[1].arguments[0], "/v/pub2");
-			assert.ok(String(mocks.cp.mock.calls[1].arguments[1]).endsWith(".lex-press-app/public/1"));
+			assert.ok(String(mocks.cp.mock.calls[1].arguments[1]).endsWith(".lex-press-app/0/public/1"));
 		}
 		finally
 		{
 			process.argv = originalArgv;
-			delete require.cache[require.resolve(MODULE_ID)];
+			resetBuilderCache();
 		}
 	});
 
@@ -396,14 +410,14 @@ describe("lexpress-builder", () =>
 			assert.equal(mocks.writeFile.mock.calls.length, 2);
 			for(const call of mocks.writeFile.mock.calls)
 			{
-				assert.ok(String(call.arguments[0]).includes(".lex-press-app/views"));
+				assert.ok(String(call.arguments[0]).includes(".lex-press-app/0/views"));
 				assert.equal(call.arguments[1], "<html>ok</html>");
 			}
 		}
 		finally
 		{
 			process.argv = originalArgv;
-			delete require.cache[require.resolve(MODULE_ID)];
+			resetBuilderCache();
 		}
 	});
 
@@ -437,7 +451,7 @@ describe("lexpress-builder", () =>
 		finally
 		{
 			process.argv = originalArgv;
-			delete require.cache[require.resolve(MODULE_ID)];
+			resetBuilderCache();
 		}
 	});
 
@@ -483,7 +497,7 @@ describe("lexpress-builder", () =>
 		finally
 		{
 			process.argv = originalArgv;
-			delete require.cache[require.resolve(MODULE_ID)];
+			resetBuilderCache();
 		}
 	});
 });
