@@ -294,7 +294,7 @@ describe("lexpress-builder", () =>
 	 * @param {import("node:test").TestContext} t
 	 * @returns {Promise<void>}
 	 */
-	it("public: acumula directorios en publicDirs", async (t) =>
+	it("public: encola el copiado de cada directorio con su path de origen", async (t) =>
 	{
 		const originalArgv = process.argv;
 		try
@@ -358,7 +358,7 @@ describe("lexpress-builder", () =>
 	 * @param {import("node:test").TestContext} t
 	 * @returns {Promise<void>}
 	 */
-	it("listen: copia publicDirs a public/N (mock fs.cp)", async (t) =>
+	it("public: numera los destinos public/N con contador local por app", async (t) =>
 	{
 		const originalArgv = process.argv;
 		try

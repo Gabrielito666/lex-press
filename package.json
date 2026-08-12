@@ -3,7 +3,7 @@
   "version": "3.0.4",
   "exports": {
     ".": {
-       "require": "./lib/lex-press/index.js"
+      "require": "./lib/lex-press/index.js"
     }
   },
   "imports": {
@@ -20,7 +20,6 @@
   "dependencies": {
     "@lek-js/lex": "3.0.3",
     "cheerio": "^1.1.2",
-    "cookie-parser": "^1.4.6",
     "esbuild": "^0.25.12",
     "express": "^4.21.0"
   },

@@ -11,9 +11,6 @@ const path = require("node:path");
 const fs = require("node:fs");
 const lexpress = require("#lib/lex-press-production");
 
-const viewsDir = path.resolve(process.cwd(), ".lex-press-app", "views");
-const assetsDir = path.resolve(process.cwd(), ".lex-press-app", "assets");
-
 /**
  * @returns {any}
  */
@@ -32,67 +29,32 @@ const staticPassThrough = (dir) =>
 	return (req, res, next) => next();
 };
 
+/**
+ * Simula que las carpetas de inicialización (.lex-press-app/N/) existen para
+ * que el constructor de HTMLTree valide OK. statSync marca isDirectory solo
+ * para paths que NO terminan en .js: el loader CJS hace statSync del archivo
+ * al re-requerir el módulo y un isDirectory:true lo rompería. readdirSync
+ * devuelve vacío para public y un placeholder para el resto.
+ * @param {any} t
+ * @returns {void}
+ */
+const mockInitDirs = (t) =>
+{
+	t.mock.method(fs, "existsSync", () => true);
+	t.mock.method(fs, "statSync", (p) => ({ isDirectory: () => !p.endsWith(".js") }));
+	t.mock.method(fs, "readdirSync", (dir) => (dir.includes("public") ? [] : ["index.html"]));
+};
+
 describe("lexpress-production", () =>
 {
 	/**
 	 * @param {any} t
-	 * @returns {Promise<void>}
-	 */
-	it("factory: retorna app express con json y cookie parser", async (t) =>
-	{
-		t.mock.method(express, "static", staticPassThrough);
-		t.mock.method(fs, "existsSync", () => true);
-		t.mock.method(fs, "statSync", () => ({ isDirectory: () => true }));
-		t.mock.method(fs, "readdirSync", (dir) => (dir.includes("public") ? [] : ["index.html"]));
-		t.mock.method(fs, "readFileSync", () => "<html>hola</html>");
-
-		const freshLexpress = reRequireLexpress();
-		const app = freshLexpress();
-
-		app.get("/ping", (req, res) =>
-		{
-			res.json({ ok: true });
-		});
-		app.post("/echo", (req, res) =>
-		{
-			res.json(req.body);
-		});
-
-		const server = app.listen(0);
-		try
-		{
-			const port = server.address().port;
-			const echoResponse = await fetch("http://127.0.0.1:" + port + "/echo", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ a: 1 })
-			});
-			const echoBody = await echoResponse.json();
-
-			assert.deepEqual(echoBody, { a: 1 });
-
-			const pingResponse = await fetch("http://127.0.0.1:" + port + "/ping");
-
-			assert.equal(pingResponse.status, 200);
-			const pingBody = await pingResponse.json();
-
-			assert.deepEqual(pingBody, { ok: true });
-
-			// edge case: el middleware de views solo sirve GET/HEAD
-			assert.equal((await fetch(`http://127.0.0.1:${port}/`, { method: "POST" })).status, 404);
-			assert.equal((await fetch(`http://127.0.0.1:${port}/`)).status, 200);
-		}
-		finally
-		{
-			await new Promise(resolve => server.close(resolve));
-		}
-	});
-
-	/**
 	 * @returns {void}
 	 */
-	it("public: es no-op y retorna la misma app", () =>
+	it("public: es no-op y retorna la misma app", (t) =>
 	{
+		mockInitDirs(t);
+
 		const app = lexpress();
 
 		const result = app.public("x");
@@ -101,10 +63,13 @@ describe("lexpress-production", () =>
 	});
 
 	/**
+	 * @param {any} t
 	 * @returns {void}
 	 */
-	it("views: es no-op y retorna la misma app", () =>
+	it("views: es no-op y retorna la misma app", (t) =>
 	{
+		mockInitDirs(t);
+
 		const app = lexpress();
 
 		const result = app.views("x");
@@ -113,10 +78,13 @@ describe("lexpress-production", () =>
 	});
 
 	/**
+	 * @param {any} t
 	 * @returns {void}
 	 */
-	it("jsx: es no-op y retorna la misma app", () =>
+	it("jsx: es no-op y retorna la misma app", (t) =>
 	{
+		mockInitDirs(t);
+
 		const app = lexpress();
 
 		const result = app.jsx("r", "p", "l");
@@ -125,10 +93,13 @@ describe("lexpress-production", () =>
 	});
 
 	/**
+	 * @param {any} t
 	 * @returns {void}
 	 */
-	it("html: es no-op y retorna la misma app", () =>
+	it("html: es no-op y retorna la misma app", (t) =>
 	{
+		mockInitDirs(t);
+
 		const app = lexpress();
 
 		const result = app.html("r", "p");
@@ -140,17 +111,25 @@ describe("lexpress-production", () =>
 	 * @param {any} t
 	 * @returns {void}
 	 */
-	it("factory: monta static de viewsDir y assetsDir", (t) =>
+	it("factory: monta static de assetsDir bajo /__assets/ (views lo sirve HTMLTree)", (t) =>
 	{
+		mockInitDirs(t);
 		t.mock.method(express, "static", staticPassThrough);
 
+		const tag = "x";
+		const tagAssetsDir = path.resolve(process.cwd(), ".lex-press-app", tag, "assets");
+		const tagViewsDir = path.resolve(process.cwd(), ".lex-press-app", tag, "views");
+
 		const freshLexpress = reRequireLexpress();
-		freshLexpress();
+		freshLexpress({ tag });
 
 		const staticDirs = express.static.mock.calls.map(call => call.arguments[0]);
 
-		assert.equal(staticDirs[0], viewsDir);
-		assert.equal(staticDirs.some(dir => dir === assetsDir), true);
+		// La realidad actual: viewsDir se sirve vía HTMLTree (middleware propio),
+		// NO con express.static. El único static de la factory es /__assets/ (y
+		// los public dirs, cubiertos en el test siguiente).
+		assert.equal(staticDirs[0], tagAssetsDir);
+		assert.equal(staticDirs.includes(tagViewsDir), false);
 	});
 
 	/**
@@ -159,6 +138,7 @@ describe("lexpress-production", () =>
 	 */
 	it("factory: monta public dirs ordenados numéricamente (mock readdirSync)", (t) =>
 	{
+		mockInitDirs(t);
 		t.mock.method(express, "static", staticPassThrough);
 		t.mock.method(fs, "readdirSync", () => ["5", "2", "10"]);
 

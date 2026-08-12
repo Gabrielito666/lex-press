@@ -7,6 +7,7 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const os = require("node:os");
 
 const lexpress = require("#lib/lex-press-dev");
 const buildFRONT = require("#lib/build-front");
@@ -64,6 +65,12 @@ const buildVirtualFilePaths = (tree) =>
 };
 
 /**
+ * Monta un fs virtual sobre el singleton node:fs. Los paths del árbol virtual
+ * responden con el árbol; cualquier path FUERA del árbol delega al fs real.
+ * Sin ese fallback, un require() posterior al mock rompería el loader CJS:
+ * statSync diría isDirectory:true para archivos .js reales y existsSync
+ * false para todo, produciendo MODULE_NOT_FOUND. Con la delegación, el
+ * loader siempre puede resolver módulos reales.
  * @param {import("node:test").TestContext} t
  * @param {Record<string, string[]>} tree
  * @param {Set<string>} filePaths
@@ -71,9 +78,18 @@ const buildVirtualFilePaths = (tree) =>
  */
 const mockVirtualFs = (t, tree, filePaths) =>
 {
-	t.mock.method(fs, "readdirSync", (dir) => tree[dir] ?? []);
-	t.mock.method(fs, "existsSync", (p) => filePaths.has(p));
-	t.mock.method(fs, "statSync", (p) => ({ isDirectory: () => !filePaths.has(p) }));
+	const realReaddirSync = fs.readdirSync;
+	const realExistsSync = fs.existsSync;
+	const realStatSync = fs.statSync;
+
+	t.mock.method(fs, "readdirSync", (dir) => tree[dir] ?? realReaddirSync(dir));
+	t.mock.method(fs, "existsSync", (p) => (filePaths.has(p) ? true : realExistsSync(p)));
+	t.mock.method(fs, "statSync", (p) =>
+	{
+		if(filePaths.has(p)) return { isDirectory: () => false };
+		if(tree[p] !== undefined) return { isDirectory: () => true };
+		return realStatSync(p);
+	});
 };
 
 /**
@@ -383,20 +399,34 @@ describe("lex-press-dev", () =>
 	/**
 	 * @returns {Promise<void>}
 	 */
-	it("public: monta express.static en la ruta dada", async() =>
+	it("public: monta express.static y sirve los archivos del directorio", async() =>
 	{
-		const app = lexpress();
-		assert.strictEqual(app.public("/virtual/public"), app);
-
-		const { server, port } = await startServer(app);
+		// Directorio temporal real: la prueba debe verificar que express.static
+		// quedó montado de verdad, no que un 404 caiga de casualidad (pasaría
+		// incluso si public() fuera un no-op).
+		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "lexpress-public-"));
 		try
 		{
-			const res = await fetch(`http://127.0.0.1:${port}/`);
-			assert.strictEqual(res.status, 404);
+			fs.writeFileSync(path.join(tmpDir, "hola.txt"), "contenido estático");
+
+			const app = lexpress();
+			assert.strictEqual(app.public(tmpDir), app);
+
+			const { server, port } = await startServer(app);
+			try
+			{
+				const ok = await fetch(`http://127.0.0.1:${port}/hola.txt`);
+				assert.strictEqual(ok.status, 200);
+				assert.strictEqual(await ok.text(), "contenido estático");
+			}
+			finally
+			{
+				await closeServer(server);
+			}
 		}
 		finally
 		{
-			await closeServer(server);
+			fs.rmSync(tmpDir, { recursive: true, force: true });
 		}
 	});
 });

@@ -115,9 +115,11 @@ describe("HTMLTree", () =>
 
 	it("init() dos veces no re-conforma el map (árbol estático)", (t) =>
 	{
+		// El html contiene "__assets" así que pasa por escapeAssets: cheerio
+		// normaliza la serialización agregando <head></head> si no existe.
 		mountTree(t, {
 			"/virtual/views": ["index.html"],
-		}, () => '<html><body><img src="/__assets/logo.png"></body></html>');
+		}, () => '<html><head></head><body><img src="/__assets/logo.png"></body></html>');
 		const tree = new HTMLTree("/virtual/views");
 		tree.init("/primera");
 		tree.init("/segunda");
@@ -125,7 +127,7 @@ describe("HTMLTree", () =>
 		// La primera baseUrl gana; la segunda llamada es un no-op.
 		assert.equal(
 			tree.get("/").html,
-			'<html><body><img src="/primera/__assets/logo.png"></body></html>'
+			'<html><head></head><body><img src="/primera/__assets/logo.png"></body></html>'
 		);
 	});
 
