@@ -117,6 +117,27 @@ The `html`, `jsx`, and `views` methods are not dynamic, so after `listen` they w
 
 If you want to create or remove routes after `listen`, you must do it as you would with Express.
 
+## Sub-apps
+
+You can mount a lexpress instance inside another with `app.use()`, just like Express. The sub-app can be mounted on the same route (`app.use(admin)`) or with a base-url (`app.use("/admin", admin)`):
+
+```js
+const lexpress = require("lex-press");
+
+const app = lexpress();
+const admin = lexpress();
+
+app.views("./views");
+admin.views("./views-admin");
+
+// admin lives under /admin
+app.use("/admin", admin);
+```
+
+In the development server, the HTML of a sub-app with base-url adapts automatically: its assets (`/__assets/...`) and the hot-reload script are served with the base prefix (`/admin/__assets/...`).
+
+In production, mount each app on a single base (see the Production section).
+
 # Development
 
 The default mode of the framework is development, so you can run the development server simply with:
@@ -172,3 +193,11 @@ node .lex-press-app/server.js
 The .lex-press-app folder also contains compiled HTML files, assets, and copies of public folders you've added to the project with `app.public()`. Therefore, this folder alone can contain everything necessary for a deployment that only uses `app.public()` and `app.views()`.
 
 The server file should only be executed from outside the folder.
+
+### Sub-apps and base-url
+
+Each app's compiled HTML is escaped only once, with the base of the first request it receives (the tree is static). If you mount the same instance on two bases, only the first one will serve HTML with correct asset paths: mount each app on a single base.
+
+## About Express middleware
+
+Lexpress exposes all the properties of the Express function, so you simply need to call `app.use(lexpress.json())` to access this functionality, just as you would in Express.

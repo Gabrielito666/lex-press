@@ -116,6 +116,27 @@ Los métodos `html`, `jsx` y `views` no son dinámicos, por lo que luego de `lis
 
 Si deseas crear o quitar rutas luego de `listen`, debes hacerlo como lo harías con Express.
 
+## Sub-apps
+
+Puedes montar una instancia de lex-press dentro de otra con `app.use()`, igual que en Express. La sub-app puede montarse en la misma ruta (`app.use(admin)`) o con una base-url (`app.use("/admin", admin)`):
+
+```js
+const lexpress = require("lex-press");
+
+const app = lexpress();
+const admin = lexpress();
+
+app.views("./views");
+admin.views("./views-admin");
+
+// admin vive bajo /admin
+app.use("/admin", admin);
+```
+
+En el servidor de desarrollo, el html de una sub-app con base-url se adapta automáticamente: sus assets (`/__assets/...`) y el script de hot-reload se sirven con el prefijo de la base (`/admin/__assets/...`).
+
+En producción, monta cada app en una sola base (ver la sección Producción).
+
 # Desarrollo
 
 El modo por defecto del framework es desarrollo, por lo que puedes ejecutar el servidor de desarrollo simplemente con:
@@ -171,3 +192,11 @@ node .lex-press-app/server.js
 La carpeta .lex-press-app además contiene los archivos html compilados, assets y copias de carpetas públicas que hayas anexado al proyecto con `app.public()`. Por lo tanto esta carpeta sola puede contener todo lo necesario en un despliegue que solo utiliza `app.public()` y `app.views()`.
 
 El archivo de servidor se debe ejecutar solo desde fuera de la carpeta.
+
+### Sub-apps y base-url
+
+El html compilado de cada app se escapa una sola vez con la base del primer request que la recibe (el árbol es estático). Si montas la misma instancia en dos bases, solo la primera servirá el html con las rutas de assets correctas: monta cada app en una sola base.
+
+## Sobre los middelwares de express
+
+Lexpress expone todas las propiedades de la función express por lo que basta con hacer `app.use(lexpress.json())` para acceder a esta funcionalidad como lo harías en express.

@@ -1,6 +1,6 @@
 {
   "name": "lex-press",
-  "version": "3.0.4",
+  "version": "3.1.0",
   "exports": {
     ".": {
       "require": "./lib/lex-press/index.js"
