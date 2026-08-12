@@ -68,6 +68,7 @@ const resetBuilderCache = () =>
 };
 
 const OUT_DIR = path.resolve(process.cwd(), ".lex-press-app");
+const OUT_TAG = path.resolve(OUT_DIR, "0");
 const OUT_PUBLIC = path.resolve(OUT_DIR, "0", "public");
 const OUT_VIEWS = path.resolve(OUT_DIR, "0", "views");
 const OUT_ASSETS = path.resolve(OUT_DIR, "0", "assets");
@@ -320,7 +321,7 @@ describe("lexpress-builder", () =>
 	 * @param {import("node:test").TestContext} t
 	 * @returns {Promise<void>}
 	 */
-	it("listen: limpia y recrea .lex-press-app con carpetas views/public/assets", async (t) =>
+	it("listen: limpia y recrea .lex-press-app con carpetas tag/views/public/assets", async (t) =>
 	{
 		const originalArgv = process.argv;
 		try
@@ -338,7 +339,7 @@ describe("lexpress-builder", () =>
 			// La queue ejecuta los jobs en paralelo (intercalados en microtasks), por lo que
 			// el orden de los mkdir del init no está garantizado frente a los de cada view.
 			// Se verifica el CONJUNTO de directorios creados, no el orden.
-			for(const dir of [OUT_DIR, OUT_PUBLIC, OUT_VIEWS, OUT_ASSETS])
+			for(const dir of [OUT_DIR, OUT_TAG, OUT_PUBLIC, OUT_VIEWS, OUT_ASSETS])
 			{
 				assert.ok(
 					mocks.mkdir.mock.calls.some(call => call.arguments[0] === dir),

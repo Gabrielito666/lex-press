@@ -238,6 +238,28 @@ describe("buildFRONT", () =>
 	/**
 	 * @returns {Promise<void>}
 	 */
+	it("html: scripts externos http/https no se leen del disco y se conservan en el html", async(t) =>
+	{
+		const pageHTML = "<html><head></head><body>"
+			+ "<script type=\"module\" src=\"https://cdn.example.com/app.js\"></script>"
+			+ "<script src=\"http://cdn2.example.com/lib.js\"></script>"
+			+ "</body></html>";
+
+		t.mock.method(fs.promises, "readFile", createReadFileMock(pageHTML));
+		t.mock.method(esbuild, "build", async() => { throw new Error("esbuild no debe llamarse"); });
+
+		const result = await buildFRONT.html("/virtual/page.html", false);
+
+		assert.equal(result.error, null);
+		assert.equal(esbuild.build.mock.calls.length, 0);
+		assert.ok(result.htmlText);
+		assert.ok(result.htmlText.includes("https://cdn.example.com/app.js"));
+		assert.ok(result.htmlText.includes("http://cdn2.example.com/lib.js"));
+	});
+
+	/**
+	 * @returns {Promise<void>}
+	 */
 	it("html: error de esbuild.build retorna { error } en el output", async(t) =>
 	{
 		const pageHTML = "<html><body><script type=\"module\">const x = 1;</script></body></html>";

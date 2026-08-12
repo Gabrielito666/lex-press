@@ -90,6 +90,15 @@ describe("escapeAssets", () =>
 		assert.equal(escapeAssets(BASE, html), html);
 	});
 
+	it("no reescribe alt/title/placeholder/aria-label (texto visible)", () =>
+	{
+		const html = doc("", '<img src="/__assets/a.png" alt="/__assets/desc.png" title="__assets/tip"><input placeholder="__assets/ph.png" aria-label="__assets/label">');
+		assert.equal(
+			escapeAssets(BASE, html),
+			doc("", '<img src="/random-url/__assets/a.png" alt="/__assets/desc.png" title="__assets/tip"><input placeholder="__assets/ph.png" aria-label="__assets/label">')
+		);
+	});
+
 	it("no toca URLs absolutas externas ni protocol-relative", () =>
 	{
 		const html = doc("", '<img src="https://cdn.example.com/__assets/logo.png"><img src="//cdn.example.com/__assets/x.png">');
@@ -129,11 +138,13 @@ describe("escapeAssets", () =>
 		assert.equal(escapeAssets("/random-url/", html), doc("", '<img src="/random-url/__assets/a.png">'));
 	});
 
-	it("baseUrl raíz o vacío no duplica el slash", () =>
+	it("baseUrl raíz, vacío o sin slash inicial no duplica ni pierde el slash", () =>
 	{
 		const html = doc("", '<img src="/__assets/a.png">');
 		assert.equal(escapeAssets("/", html), html);
 		assert.equal(escapeAssets("", html), html);
+		assert.equal(escapeAssets("random-url", html), doc("", '<img src="/random-url/__assets/a.png">'));
+		assert.equal(escapeAssets("random-url/", html), doc("", '<img src="/random-url/__assets/a.png">'));
 	});
 
 	it("devuelve el mismo string si el html no contiene __assets", () =>

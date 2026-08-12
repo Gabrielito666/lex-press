@@ -41,6 +41,10 @@ describe("lexpress-production", () =>
 	it("factory: retorna app express con json y cookie parser", async (t) =>
 	{
 		t.mock.method(express, "static", staticPassThrough);
+		t.mock.method(fs, "existsSync", () => true);
+		t.mock.method(fs, "statSync", () => ({ isDirectory: () => true }));
+		t.mock.method(fs, "readdirSync", (dir) => (dir.includes("public") ? [] : ["index.html"]));
+		t.mock.method(fs, "readFileSync", () => "<html>hola</html>");
 
 		const freshLexpress = reRequireLexpress();
 		const app = freshLexpress();
@@ -73,6 +77,10 @@ describe("lexpress-production", () =>
 			const pingBody = await pingResponse.json();
 
 			assert.deepEqual(pingBody, { ok: true });
+
+			// edge case: el middleware de views solo sirve GET/HEAD
+			assert.equal((await fetch(`http://127.0.0.1:${port}/`, { method: "POST" })).status, 404);
+			assert.equal((await fetch(`http://127.0.0.1:${port}/`)).status, 200);
 		}
 		finally
 		{

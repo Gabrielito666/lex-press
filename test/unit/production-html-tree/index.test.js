@@ -215,8 +215,13 @@ describe("HTMLTree", () =>
 			tree.get("/sub%20ruta/index.html").html, // combina con sufijo index
 			`<html><h1>${path.resolve("/virtual/views/sub ruta", "index.html")}</h1></html>`
 		);
-		assert.equal(tree.get("/../secret"), undefined); // traversal rechazado
-		assert.equal(tree.get("%ZZ"), undefined);        // URI malformado rechazado
+		assert.equal(tree.get("/../secret"), undefined);       // traversal: segmento ".." al inicio
+		assert.equal(tree.get("/sub%20ruta/../x"), undefined); // traversal en el medio
+		assert.equal(tree.get("/sub%20ruta/.."), undefined);   // traversal trailing
+		assert.equal(tree.get("/.."), undefined);              // traversal raíz
+		assert.equal(tree.get("/x\\..\\y"), undefined);        // traversal con backslash
+		assert.equal(tree.get("/%2e%2e/x"), undefined);        // traversal encodado (decode previo)
+		assert.equal(tree.get("%ZZ"), undefined);              // URI malformado rechazado
 	});
 
 	it("lanza error si el directorio no existe", (t) =>
