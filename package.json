@@ -1,6 +1,6 @@
 {
   "name": "lex-press",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "exports": {
     ".": {
       "require": "./lib/lex-press/index.js"
@@ -18,7 +18,7 @@
     "build-fixture": "node fixtures/dev/index.js --build"
   },
   "dependencies": {
-    "@lek-js/lex": "3.0.3",
+    "@lek-js/lex": "3.0.4",
     "cheerio": "^1.1.2",
     "esbuild": "^0.25.12",
     "express": "^4.21.0"

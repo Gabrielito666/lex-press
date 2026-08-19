@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@lek-js/lex':
-        specifier: 3.0.3
-        version: 3.0.3
+        specifier: 3.0.4
+        version: 3.0.4
       cheerio:
         specifier: ^1.1.2
         version: 1.2.0
@@ -214,8 +214,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@lek-js/lex@3.0.3':
-    resolution: {integrity: sha512-TcU0aznzv2mYa+tdAqAEvgEizxsXmafn38qtTJ/G9M0vsxFxppZPhgHmLtH3xMbcWOXnSCJXxp7RO/1BOVugfQ==}
+  '@lek-js/lex@3.0.4':
+    resolution: {integrity: sha512-Wc4QGVgsV8yfvVp8tlwecYGyvB5Rq0J2fgMiGwH0+4SIjYK6LXLTXwwU+nBYrmvad9yvixJKutEGPAsQYtdn6Q==}
 
   accepts@1.3.8:
     resolution: {integrity: sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw==}
@@ -788,7 +788,7 @@ snapshots:
   '@esbuild/win32-x64@0.25.12':
     optional: true
 
-  '@lek-js/lex@3.0.3':
+  '@lek-js/lex@3.0.4':
     dependencies:
       esbuild: 0.25.12
       jsdom: 26.1.0
@@ -1141,15 +1141,11 @@ snapshots:
 
   'lex-press@file:':
     dependencies:
-      '@lek-js/lex': 3.0.3
       cheerio: 1.2.0
       esbuild: 0.25.12
       express: 4.22.2
     transitivePeerDependencies:
-      - bufferutil
-      - canvas
       - supports-color
-      - utf-8-validate
 
   lru-cache@10.4.3: {}
 
