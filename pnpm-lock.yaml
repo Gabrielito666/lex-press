@@ -1141,11 +1141,15 @@ snapshots:
 
   'lex-press@file:':
     dependencies:
+      '@lek-js/lex': 3.0.4
       cheerio: 1.2.0
       esbuild: 0.25.12
       express: 4.22.2
     transitivePeerDependencies:
+      - bufferutil
+      - canvas
       - supports-color
+      - utf-8-validate
 
   lru-cache@10.4.3: {}
 
