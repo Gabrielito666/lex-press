@@ -137,7 +137,7 @@ describe("builder-virtual-plugin", () =>
 		assert.equal(out.loader, "js");
 		assert.equal(
 			out.resolveDir,
-			path.resolve(process.cwd(), "node_modules/lex-press/lib/lex-press-production/")
+			path.resolve(__dirname, "../../../lib/lex-press-production/")
 		);
 	});
 

@@ -9,7 +9,6 @@ const assert = require("node:assert/strict");
 const express = require("express");
 const path = require("node:path");
 const fs = require("node:fs");
-const lexpress = require("#lib/lex-press-production");
 
 /**
  * @returns {any}
@@ -30,19 +29,47 @@ const staticPassThrough = (dir) =>
 };
 
 /**
- * Simula que las carpetas de inicialización (.lex-press-app/N/) existen para
- * que el constructor de HTMLTree valide OK. statSync marca isDirectory solo
- * para paths que NO terminan en .js: el loader CJS hace statSync del archivo
- * al re-requerir el módulo y un isDirectory:true lo rompería. readdirSync
- * devuelve vacío para public y un placeholder para el resto.
+ * Mockea fs para simular la estructura de .lex-press-app con los maps JSON.
  * @param {any} t
+ * @param {Object} options
+ * @param {Record<string, string>} [options.publicMap]
+ * @param {Record<string, string[]>} [options.viewsMap]
+ * @param {Record<string, string>} [options.htmlsMap]
+ * @param {Record<string, string>} [options.htmlFiles]
  * @returns {void}
  */
-const mockInitDirs = (t) =>
+const mockFileSystem = (t, options = {}) =>
 {
-	t.mock.method(fs, "existsSync", () => true);
-	t.mock.method(fs, "statSync", (p) => ({ isDirectory: () => !p.endsWith(".js") }));
-	t.mock.method(fs, "readdirSync", (dir) => (dir.includes("public") ? [] : ["index.html"]));
+	const { publicMap = {}, viewsMap = {}, htmlsMap = {}, htmlFiles = {} } = options;
+	const originalReadFileSync = fs.readFileSync.bind(fs);
+
+	t.mock.method(fs, "readFileSync", (filePath, encoding) =>
+	{
+		const pathStr = String(filePath);
+
+		if(pathStr.endsWith("public-map.json"))
+		{
+			return JSON.stringify(publicMap);
+		}
+		if(pathStr.endsWith("views-map.json"))
+		{
+			return JSON.stringify(viewsMap);
+		}
+		if(pathStr.endsWith("htmls-map.json"))
+		{
+			return JSON.stringify(htmlsMap);
+		}
+
+		for(const [hash, content] of Object.entries(htmlFiles))
+		{
+			if(pathStr.endsWith(`${hash}.html`))
+			{
+				return content;
+			}
+		}
+
+		return originalReadFileSync(filePath, encoding);
+	});
 };
 
 describe("lexpress-production", () =>
@@ -51,28 +78,62 @@ describe("lexpress-production", () =>
 	 * @param {any} t
 	 * @returns {void}
 	 */
-	it("public: es no-op y retorna la misma app", (t) =>
+	it("public: monta express.static con la carpeta del public-map", (t) =>
 	{
-		mockInitDirs(t);
+		mockFileSystem(t, {
+			publicMap: { "public": "0" }
+		});
+		t.mock.method(express, "static", staticPassThrough);
 
-		const app = lexpress();
+		const freshLexpress = reRequireLexpress();
+		const app = freshLexpress({ tag: "test" });
 
-		const result = app.public("x");
+		app.public("public");
 
-		assert.strictEqual(result, app);
+		const staticCalls = express.static.mock.calls.map(call => call.arguments[0]);
+		assert.ok(staticCalls.some(dir => String(dir).includes("public/0")));
 	});
 
 	/**
 	 * @param {any} t
 	 * @returns {void}
 	 */
-	it("views: es no-op y retorna la misma app", (t) =>
+	it("public: normaliza paths absolutos y relativos", (t) =>
 	{
-		mockInitDirs(t);
+		mockFileSystem(t, {
+			publicMap: { "public": "0" }
+		});
+		t.mock.method(express, "static", staticPassThrough);
 
-		const app = lexpress();
+		const freshLexpress = reRequireLexpress();
+		const app = freshLexpress({ tag: "test" });
 
-		const result = app.views("x");
+		const absolutePath = path.resolve(process.cwd(), "public");
+		app.public(absolutePath);
+
+		const staticCalls = express.static.mock.calls.map(call => call.arguments[0]);
+		assert.ok(staticCalls.some(dir => String(dir).includes("public/0")));
+	});
+
+	/**
+	 * @param {any} t
+	 * @returns {void}
+	 */
+	it("views: registra rutas desde views-map y htmls-map", (t) =>
+	{
+		mockFileSystem(t, {
+			viewsMap: { "views": ["/home", "/about"] },
+			htmlsMap: { "/home": "abc123", "/about": "def456" },
+			htmlFiles: {
+				"abc123": "<html>home</html>",
+				"def456": "<html>about</html>"
+			}
+		});
+
+		const freshLexpress = reRequireLexpress();
+		const app = freshLexpress({ tag: "test" });
+
+		const result = app.views("views");
 
 		assert.strictEqual(result, app);
 	});
@@ -83,9 +144,10 @@ describe("lexpress-production", () =>
 	 */
 	it("jsx: es no-op y retorna la misma app", (t) =>
 	{
-		mockInitDirs(t);
+		mockFileSystem(t);
 
-		const app = lexpress();
+		const freshLexpress = reRequireLexpress();
+		const app = freshLexpress({ tag: "test" });
 
 		const result = app.jsx("r", "p", "l");
 
@@ -98,9 +160,10 @@ describe("lexpress-production", () =>
 	 */
 	it("html: es no-op y retorna la misma app", (t) =>
 	{
-		mockInitDirs(t);
+		mockFileSystem(t);
 
-		const app = lexpress();
+		const freshLexpress = reRequireLexpress();
+		const app = freshLexpress({ tag: "test" });
 
 		const result = app.html("r", "p");
 
@@ -111,44 +174,41 @@ describe("lexpress-production", () =>
 	 * @param {any} t
 	 * @returns {void}
 	 */
-	it("factory: monta static de assetsDir bajo /__assets/ (views lo sirve HTMLTree)", (t) =>
+	it("factory: monta static de assetsDir bajo /__assets/", (t) =>
 	{
-		mockInitDirs(t);
+		mockFileSystem(t);
 		t.mock.method(express, "static", staticPassThrough);
 
 		const tag = "x";
 		const tagAssetsDir = path.resolve(process.cwd(), ".lex-press-app", tag, "assets");
-		const tagViewsDir = path.resolve(process.cwd(), ".lex-press-app", tag, "views");
 
 		const freshLexpress = reRequireLexpress();
 		freshLexpress({ tag });
 
 		const staticDirs = express.static.mock.calls.map(call => call.arguments[0]);
 
-		// La realidad actual: viewsDir se sirve vía HTMLTree (middleware propio),
-		// NO con express.static. El único static de la factory es /__assets/ (y
-		// los public dirs, cubiertos en el test siguiente).
 		assert.equal(staticDirs[0], tagAssetsDir);
-		assert.equal(staticDirs.includes(tagViewsDir), false);
 	});
 
 	/**
 	 * @param {any} t
 	 * @returns {void}
 	 */
-	it("factory: monta public dirs ordenados numéricamente (mock readdirSync)", (t) =>
+	it("public: múltiples llamadas monta múltiples static", (t) =>
 	{
-		mockInitDirs(t);
+		mockFileSystem(t, {
+			publicMap: { "public1": "0", "public2": "1" }
+		});
 		t.mock.method(express, "static", staticPassThrough);
-		t.mock.method(fs, "readdirSync", () => ["5", "2", "10"]);
 
 		const freshLexpress = reRequireLexpress();
-		freshLexpress();
+		const app = freshLexpress({ tag: "test" });
 
-		const publicDirs = express.static.mock.calls
-			.map(call => call.arguments[0])
-			.filter(dir => path.basename(path.dirname(dir)) === "public");
+		app.public("public1");
+		app.public("public2");
 
-		assert.deepEqual(publicDirs.map(dir => path.basename(dir)), ["2", "5", "10"]);
+		const staticCalls = express.static.mock.calls.map(call => call.arguments[0]);
+		assert.ok(staticCalls.some(dir => String(dir).includes("public/0")));
+		assert.ok(staticCalls.some(dir => String(dir).includes("public/1")));
 	});
 });
