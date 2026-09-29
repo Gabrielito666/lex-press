@@ -68,9 +68,9 @@ const resetBuilderCache = () =>
 };
 
 const OUT_DIR = path.resolve(process.cwd(), ".lex-press-app");
+const OUT_HTML = path.resolve(OUT_DIR, "html");
 const OUT_TAG = path.resolve(OUT_DIR, "0");
 const OUT_PUBLIC = path.resolve(OUT_DIR, "0", "public");
-const OUT_VIEWS = path.resolve(OUT_DIR, "0", "views");
 const OUT_ASSETS = path.resolve(OUT_DIR, "0", "assets");
 
 /**
@@ -321,7 +321,7 @@ describe("lexpress-builder", () =>
 	 * @param {import("node:test").TestContext} t
 	 * @returns {Promise<void>}
 	 */
-	it("listen: limpia y recrea .lex-press-app con carpetas tag/views/public/assets", async (t) =>
+	it("listen: limpia y recrea .lex-press-app con carpetas html/public/assets", async (t) =>
 	{
 		const originalArgv = process.argv;
 		try
@@ -339,7 +339,7 @@ describe("lexpress-builder", () =>
 			// La queue ejecuta los jobs en paralelo (intercalados en microtasks), por lo que
 			// el orden de los mkdir del init no está garantizado frente a los de cada view.
 			// Se verifica el CONJUNTO de directorios creados, no el orden.
-			for(const dir of [OUT_DIR, OUT_TAG, OUT_PUBLIC, OUT_VIEWS, OUT_ASSETS])
+			for(const dir of [OUT_DIR, OUT_HTML, OUT_TAG, OUT_PUBLIC, OUT_ASSETS])
 			{
 				assert.ok(
 					mocks.mkdir.mock.calls.some(call => call.arguments[0] === dir),
@@ -387,7 +387,7 @@ describe("lexpress-builder", () =>
 	 * @param {import("node:test").TestContext} t
 	 * @returns {Promise<void>}
 	 */
-	it("listen: buildea cada página y escribe views/index.html (mock buildFRONT)", async (t) =>
+	it("listen: buildea cada página y escribe html/{hash}.html", async (t) =>
 	{
 		const originalArgv = process.argv;
 		try
@@ -408,10 +408,17 @@ describe("lexpress-builder", () =>
 			assert.equal(mocks.jsx.mock.calls[0].arguments[1], "/v/layout.jsx");
 			assert.equal(mocks.jsx.mock.calls[0].arguments[2], true);
 
-			assert.equal(mocks.writeFile.mock.calls.length, 2);
-			for(const call of mocks.writeFile.mock.calls)
+			// Buscar los writes de HTMLs (no los de maps JSON)
+			const htmlWrites = mocks.writeFile.mock.calls.filter(call =>
+				String(call.arguments[0]).endsWith(".html")
+			);
+
+			assert.equal(htmlWrites.length, 2);
+
+			// Verificar que los HTMLs se escriben en html/
+			for(const call of htmlWrites)
 			{
-				assert.ok(String(call.arguments[0]).includes(".lex-press-app/0/views"));
+				assert.ok(String(call.arguments[0]).includes(".lex-press-app/html/"));
 				assert.equal(call.arguments[1], "<html>ok</html>");
 			}
 		}
@@ -494,6 +501,54 @@ describe("lexpress-builder", () =>
 			assert.equal(exit.mock.calls[0].arguments[0], 1);
 			const lastRmCall = rm.mock.calls[rm.mock.calls.length - 1];
 			assert.equal(lastRmCall.arguments[0], OUT_DIR);
+		}
+		finally
+		{
+			process.argv = originalArgv;
+			resetBuilderCache();
+		}
+	});
+
+	/**
+	 * @param {import("node:test").TestContext} t
+	 * @returns {Promise<void>}
+	 */
+	it("listen: escribe htmls-map.json, public-map.json y views-map.json", async (t) =>
+	{
+		const originalArgv = process.argv;
+		try
+		{
+			const mocks = setupMocks(t);
+
+			// Mockear fs.readdirSync para que app.views() funcione
+			const realReaddirSync = fs.readdirSync.bind(fs);
+			t.mock.method(fs, "readdirSync", (dirPath, options) =>
+			{
+				if(String(dirPath).includes("/v/views"))
+				{
+					return [];
+				}
+				return realReaddirSync(dirPath, options);
+			});
+
+			const app = loadBuilder([...originalArgv]);
+
+			app.public("/v/pub1");
+			app.views("/v/views");
+			await app.listen(0, () => {});
+
+			// Buscar los writes de los maps JSON
+			const mapWrites = mocks.writeFile.mock.calls.filter(call =>
+				String(call.arguments[0]).endsWith("-map.json")
+			);
+
+			assert.equal(mapWrites.length, 3);
+
+			// Verificar que se escriben los tres maps
+			const mapPaths = mapWrites.map(call => String(call.arguments[0]));
+			assert.ok(mapPaths.some(p => p.endsWith("htmls-map.json")));
+			assert.ok(mapPaths.some(p => p.endsWith("public-map.json")));
+			assert.ok(mapPaths.some(p => p.endsWith("views-map.json")));
 		}
 		finally
 		{

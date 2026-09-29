@@ -28,7 +28,7 @@ const originalBuildFrontExports = require.cache[buildFrontPath].exports;
 const originalEsbuildExports = require.cache[esbuildPath].exports;
 const originalOptionsExports = require.cache[optionsPath].exports;
 
-const VIEWS_DIR = "/app/.lex-press-app/tag0/views";
+const VIEWS_DIR = "/app/.lex-press-app/html";
 const ASSETS_DIR = "/app/.lex-press-app/tag0/assets";
 const SERVER_FILE = "/app/.lex-press-app/server.js";
 
@@ -87,7 +87,6 @@ describe("builder-helpers", () =>
 			buildCalls.push(args);
 			return { ...CLEAN_OUTPUT };
 		};
-		t.mock.method(fs.promises, "mkdir", async() => {});
 		t.mock.method(fs.promises, "writeFile", async() => {});
 
 		const { buildView } = loadHelpers();
@@ -111,7 +110,6 @@ describe("builder-helpers", () =>
 			error: new Error("boom"),
 			warnings: [],
 		});
-		t.mock.method(fs.promises, "mkdir", async() => {});
 		t.mock.method(fs.promises, "writeFile", async() => {});
 
 		const { buildView } = loadHelpers();
@@ -120,47 +118,42 @@ describe("builder-helpers", () =>
 			buildView("/home", { ext: "html", page: "/fake/page.html", layout: null }, VIEWS_DIR, ASSETS_DIR),
 			/boom/
 		);
-		assert.equal(fs.promises.mkdir.mock.calls.length, 0);
+		assert.equal(fs.promises.writeFile.mock.calls.length, 0);
 	});
 
 	/**
 	 * @param {import("node:test").TestContext} t
 	 * @returns {Promise<void>}
 	 */
-	it("buildView: crea el dir de la ruta con recursive", async(t) =>
+	it("buildView: retorna el hash SHA-256 del HTML compilado", async(t) =>
 	{
 		require.cache[buildFrontPath].exports = async() => ({ ...CLEAN_OUTPUT });
-		t.mock.method(fs.promises, "mkdir", async() => {});
 		t.mock.method(fs.promises, "writeFile", async() => {});
 
 		const { buildView } = loadHelpers();
 
-		await buildView("/about", { ext: "html", page: "/fake/page.html", layout: null }, VIEWS_DIR, ASSETS_DIR);
+		const hash = await buildView("/about", { ext: "html", page: "/fake/page.html", layout: null }, VIEWS_DIR, ASSETS_DIR);
 
-		assert.equal(fs.promises.mkdir.mock.calls.length, 1);
-		assert.deepEqual(fs.promises.mkdir.mock.calls[0].arguments, [
-			path.resolve(VIEWS_DIR, "./about"),
-			{ recursive: true },
-		]);
+		assert.equal(hash.length, 64);
+		assert.match(hash, /^[a-f0-9]{64}$/);
 	});
 
 	/**
 	 * @param {import("node:test").TestContext} t
 	 * @returns {Promise<void>}
 	 */
-	it("buildView: escribe index.html con htmlText en utf-8", async(t) =>
+	it("buildView: escribe html/{hash}.html con htmlText en utf-8", async(t) =>
 	{
 		require.cache[buildFrontPath].exports = async() => ({ ...CLEAN_OUTPUT });
-		t.mock.method(fs.promises, "mkdir", async() => {});
 		t.mock.method(fs.promises, "writeFile", async() => {});
 
 		const { buildView } = loadHelpers();
 
-		await buildView("/home", { ext: "html", page: "/fake/page.html", layout: null }, VIEWS_DIR, ASSETS_DIR);
+		const hash = await buildView("/home", { ext: "html", page: "/fake/page.html", layout: null }, VIEWS_DIR, ASSETS_DIR);
 
 		assert.equal(fs.promises.writeFile.mock.calls.length, 2);
 		assert.deepEqual(fs.promises.writeFile.mock.calls[0].arguments, [
-			path.resolve(VIEWS_DIR, "./home/index.html"),
+			path.resolve(VIEWS_DIR, `${hash}.html`),
 			CLEAN_OUTPUT.htmlText,
 			"utf-8",
 		]);
@@ -173,7 +166,6 @@ describe("builder-helpers", () =>
 	it("buildView: escribe cada asset como Buffer en assetsDir", async(t) =>
 	{
 		require.cache[buildFrontPath].exports = async() => ({ ...CLEAN_OUTPUT });
-		t.mock.method(fs.promises, "mkdir", async() => {});
 		t.mock.method(fs.promises, "writeFile", async() => {});
 
 		const { buildView } = loadHelpers();
@@ -199,7 +191,6 @@ describe("builder-helpers", () =>
 			...CLEAN_OUTPUT,
 			warnings: ["warn-a", "warn-b"],
 		});
-		t.mock.method(fs.promises, "mkdir", async() => {});
 		t.mock.method(fs.promises, "writeFile", async() => {});
 		t.mock.method(console, "warn", () => {});
 
