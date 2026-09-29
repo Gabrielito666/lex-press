@@ -34,6 +34,16 @@ app.listen(3000, () => {
 });
 ```
 
+### App Tag
+
+The `lexpress` factory accepts an optional `tag` parameter to identify the app instance. This is especially useful for libraries that bundle a lexpress app, making them resilient to async or non-deterministic mounting scenarios:
+
+```js
+const app = lexpress({ tag: "my-library-app" });
+```
+
+Without a tag, apps are identified by an auto-incrementing counter. When building for production, each tag gets its own folder structure under `.lex-press-app/{tag}/`.
+
 ## Public
 
 It's a utility method for serving public directories. You pass it the folder path and you're done:
@@ -41,6 +51,16 @@ It's a utility method for serving public directories. You pass it the folder pat
 ```js
 app.public("public");
 ```
+
+### Using a custom key
+
+If your path depends on `__dirname` (e.g., in a library), you should provide a `key` option. This ensures the path mapping works correctly after bundling:
+
+```js
+app.public(__dirname + "/public", { key: "my-library-public" });
+```
+
+Without a key, the path is normalized relative to `process.cwd()`, which may not work correctly when bundled.
 
 ## HTML
 
@@ -111,6 +131,16 @@ A schema like this would serve the page elements.
 - If we have `page.html`, it's served directly
 - If it's `.jsx`, the closest layout is used by going back through the directories
 
+### Using a custom key
+
+If your views path depends on `__dirname` (e.g., in a library that needs to locate its own view files after bundling), you must provide a `key` option:
+
+```js
+app.views(__dirname + "/views", { key: "my-library-views" });
+```
+
+Without a key, the path is normalized relative to `process.cwd()`, which may not work correctly when bundled.
+
 ### Important
 
 The `html`, `jsx`, and `views` methods are not dynamic, so after `listen` they will no longer have an effect. This is because in production there is no build for security reasons.
@@ -179,9 +209,16 @@ You can also use a series of esbuild flags if you need to customize the export:
 - external
 - tsconfig
 
-### Important
+### Important about `__dirname`
 
-Be careful using `__dirname`. This compiles everything into a bundle so relative paths would change... use `process.cwd()`.
+When bundling, `__dirname` in your code will resolve to the `.lex-press-app/` directory, not your original project directory. However, `__dirname` is a valid option for resolving paths to `views` or `public` if you provide a `key` option to those methods:
+
+```js
+app.views(__dirname + "/views", { key: "my-views" });
+app.public(__dirname + "/public", { key: "my-public" });
+```
+
+For other routes and file resolutions, use `process.cwd()` or an environment variable instead.
 
 # Production
 

@@ -211,4 +211,46 @@ describe("lexpress-production", () =>
 		assert.ok(staticCalls.some(dir => String(dir).includes("public/0")));
 		assert.ok(staticCalls.some(dir => String(dir).includes("public/1")));
 	});
+
+	/**
+	 * @param {any} t
+	 * @returns {void}
+	 */
+	it("public: con key hace lookup por key en vez de path normalizado", (t) =>
+	{
+		mockFileSystem(t, {
+			publicMap: { "my-custom-key": "0" }
+		});
+		t.mock.method(express, "static", staticPassThrough);
+
+		const freshLexpress = reRequireLexpress();
+		const app = freshLexpress({ tag: "test" });
+
+		app.public("/some/absolute/path/that/would/normalize/differently", { key: "my-custom-key" });
+
+		const staticCalls = express.static.mock.calls.map(call => call.arguments[0]);
+		assert.ok(staticCalls.some(dir => String(dir).includes("public/0")));
+	});
+
+	/**
+	 * @param {any} t
+	 * @returns {void}
+	 */
+	it("views: con key hace lookup por key en vez de path normalizado", (t) =>
+	{
+		mockFileSystem(t, {
+			viewsMap: { "my-views-key": ["/home"] },
+			htmlsMap: { "/home": "abc123" },
+			htmlFiles: {
+				"abc123": "<html>home</html>"
+			}
+		});
+
+		const freshLexpress = reRequireLexpress();
+		const app = freshLexpress({ tag: "test" });
+
+		const result = app.views("/some/path/that/would/normalize/differently", { key: "my-views-key" });
+
+		assert.strictEqual(result, app);
+	});
 });

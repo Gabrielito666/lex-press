@@ -115,6 +115,7 @@ const setupMocks = (t) =>
 	const jsx = t.mock.method(buildFRONT, "jsx", async () => ({ ...CLEAN_HTML_OUTPUT }));
 	t.mock.method(console, "log", () => {});
 	t.mock.method(console, "warn", () => {});
+	t.mock.method(console, "info", () => {});
 	t.mock.method(console, "error", () => {});
 	// OJO: mockear fs.readFileSync en crudo rompe el loader CJS de Node, que lo usa
 	// internamente para leer el source de cada módulo (require devolvería {}). Por eso
@@ -549,6 +550,120 @@ describe("lexpress-builder", () =>
 			assert.ok(mapPaths.some(p => p.endsWith("htmls-map.json")));
 			assert.ok(mapPaths.some(p => p.endsWith("public-map.json")));
 			assert.ok(mapPaths.some(p => p.endsWith("views-map.json")));
+		}
+		finally
+		{
+			process.argv = originalArgv;
+			resetBuilderCache();
+		}
+	});
+
+	/**
+	 * @param {import("node:test").TestContext} t
+	 * @returns {Promise<void>}
+	 */
+	it("public: con key usa la key en public-map en vez del path normalizado", async (t) =>
+	{
+		const originalArgv = process.argv;
+		try
+		{
+			const mocks = setupMocks(t);
+			const app = loadBuilder([...originalArgv]);
+
+			app.public("/v/pub1", { key: "my-custom-key" });
+			await app.listen(0, () => {});
+
+			const mapWrites = mocks.writeFile.mock.calls.filter(call =>
+				String(call.arguments[0]).endsWith("public-map.json")
+			);
+			assert.equal(mapWrites.length, 1);
+			const publicMap = JSON.parse(mapWrites[0].arguments[1]);
+			assert.equal(publicMap["my-custom-key"], "0");
+			assert.equal(publicMap["v/pub1"], undefined);
+		}
+		finally
+		{
+			process.argv = originalArgv;
+			resetBuilderCache();
+		}
+	});
+
+	/**
+	 * @param {import("node:test").TestContext} t
+	 * @returns {Promise<void>}
+	 */
+	it("views: con key usa la key en views-map en vez del path normalizado", async (t) =>
+	{
+		const originalArgv = process.argv;
+		try
+		{
+			const mocks = setupMocks(t);
+
+			const realReaddirSync = fs.readdirSync.bind(fs);
+			t.mock.method(fs, "readdirSync", (dirPath, options) =>
+			{
+				if(String(dirPath).includes("/v/views"))
+				{
+					return [];
+				}
+				return realReaddirSync(dirPath, options);
+			});
+
+			const app = loadBuilder([...originalArgv]);
+
+			app.views("/v/views", { key: "my-views-key" });
+			await app.listen(0, () => {});
+
+			const mapWrites = mocks.writeFile.mock.calls.filter(call =>
+				String(call.arguments[0]).endsWith("views-map.json")
+			);
+			assert.equal(mapWrites.length, 1);
+			const viewsMap = JSON.parse(mapWrites[0].arguments[1]);
+			assert.ok("my-views-key" in viewsMap);
+			assert.equal(viewsMap["v/views"], undefined);
+		}
+		finally
+		{
+			process.argv = originalArgv;
+			resetBuilderCache();
+		}
+	});
+
+	/**
+	 * @param {import("node:test").TestContext} t
+	 * @returns {Promise<void>}
+	 */
+	it("listen: con __dirname en el bundle usa console.info en vez de console.warn", async (t) =>
+	{
+		const originalArgv = process.argv;
+		try
+		{
+			t.mock.method(fs.promises, "rm", async () => {});
+			t.mock.method(fs.promises, "mkdir", async () => {});
+			t.mock.method(fs.promises, "cp", async () => {});
+			t.mock.method(fs.promises, "writeFile", async () => {});
+			t.mock.method(esbuild, "build", async () => {});
+			t.mock.method(process, "exit", () => {});
+			const info = t.mock.method(console, "info", () => {});
+			t.mock.method(console, "log", () => {});
+			t.mock.method(console, "warn", () => {});
+			t.mock.method(console, "error", () => {});
+			t.mock.method(buildFRONT, "html", async () => ({ ...CLEAN_HTML_OUTPUT }));
+			t.mock.method(buildFRONT, "jsx", async () => ({ ...CLEAN_HTML_OUTPUT }));
+			const realReadFileSync = fs.readFileSync.bind(fs);
+			t.mock.method(fs, "readFileSync", (filePath, ...args) =>
+				String(filePath).endsWith("server.js") ? "__dirname" : realReadFileSync(filePath, ...args));
+			t.mock.method(fs, "existsSync", () => true);
+
+			const app = loadBuilder([...originalArgv]);
+
+			app.html("/", "/v/index.html");
+			await app.listen(0, () => {});
+
+			assert.ok(info.mock.calls.some(call =>
+				String(call.arguments[0]).includes("__dirname") &&
+				String(call.arguments[0]).includes("key")
+			));
 		}
 		finally
 		{

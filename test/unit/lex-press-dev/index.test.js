@@ -429,4 +429,57 @@ describe("lex-press-dev", () =>
 			fs.rmSync(tmpDir, { recursive: true, force: true });
 		}
 	});
+
+	/**
+	 * @returns {Promise<void>}
+	 */
+	it("public: acepta segundo parametro options sin romper", async() =>
+	{
+		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "lexpress-public-key-"));
+		try
+		{
+			fs.writeFileSync(path.join(tmpDir, "test.txt"), "contenido");
+
+			const app = lexpress();
+			assert.strictEqual(app.public(tmpDir, { key: "my-custom-key" }), app);
+
+			const { server, port } = await startServer(app);
+			try
+			{
+				const ok = await fetch(`http://127.0.0.1:${port}/test.txt`);
+				assert.strictEqual(ok.status, 200);
+			}
+			finally
+			{
+				await closeServer(server);
+			}
+		}
+		finally
+		{
+			fs.rmSync(tmpDir, { recursive: true, force: true });
+		}
+	});
+
+	/**
+	 * @param {import("node:test").TestContext} t
+	 * @returns {Promise<void>}
+	 */
+	it("views: acepta segundo parametro options sin romper", async(t) =>
+	{
+		/**@type {Record<string, string[]>}*/
+		const tree = {
+			"/virtual/views-key": ["home"],
+			"/virtual/views-key/home": ["page.html"],
+		};
+
+		const filePaths = buildVirtualFilePaths(tree);
+		mockVirtualFs(t, tree, filePaths);
+
+		t.mock.method(buildFRONT, "html", () => buildOutputResolved("<html><head></head><body>Home</body></html>"));
+
+		const app = lexpress();
+		assert.strictEqual(app.views("/virtual/views-key", { key: "my-views-key" }), app);
+
+		assert.strictEqual(buildFRONT.html.mock.calls.length, 1);
+	});
 });
