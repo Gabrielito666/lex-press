@@ -9,12 +9,37 @@
  * ejecuta el init EAGER (fsSync.existsSync / fs.rm reales) durante el require del módulo;
  * si se carga el módulo primero, el init borra .lex-press-app de verdad antes de que los
  * mocks existan (rompe rm.mock.calls y los tests de producción que leen .lex-press-app).
+ * OJO 2: app.listen(0, cb) resuelve cuando el server binda el puerto, NO cuando la IIFE
+ * del pipeline de build termina (esa siempre culmina con process.exit(0) o process.exit(1)).
+ * Por eso existe settle(): un spinloop que espera a que el mock de process.exit haya sido
+ * llamado al menos una vez; cada test hace await mocks.settle() tras el listen y antes de
+ * cualquier assert, para no competir con el pipeline async.
  */
 
-const { describe, it } = require("node:test");
+const { describe, it, after } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+
+const http = require("node:http");
+
+/**
+ * El override de app.listen() del builder (lib/lex-press-builder/index.js) delega en el
+ * express original y enlaza un http.Server REAL que cada test descarta. Con
+ * node --test --test-concurrency=1 eso cuelga el runner: el proceso hijo termina sus
+ * tests pero su loop de eventos sigue vivo por los servers abiertos y el padre espera
+ * su exit eternamente. Para no tocar los 15 tests, cada Server se rastrea en el
+ * momento de su listen() y la suite los cierra en su after().
+ * @type {import("node:http").Server[]}
+ */
+const trackedServers = [];
+
+const realServerListen = http.Server.prototype.listen;
+http.Server.prototype.listen = function(...args)
+{
+	trackedServers.push(this);
+	return realServerListen.apply(this, args);
+};
 
 /**
  * @typedef {{
@@ -100,8 +125,40 @@ const loadBuilder = (argv) =>
 };
 
 /**
+ * Crea la función settle asociada a un mock de process.exit. app.listen NO espera la
+ * IIFE del pipeline de build (resuelve al bindar el puerto), así que los asserts
+ * competirían con los jobs de la cola. settle() resuelve cuando process.exit fue llamado
+ * al menos una vez —el pipeline SIEMPRE culmina con exit(0) (éxito) o exit(1) (fracaso)—
+ * y rechaza si eso no ocurre dentro de 5s.
+ * @param {MockHandle} exit
+ * @returns {() => Promise<void>}
+ */
+const createSettle = (exit) =>
+{
+	return () => new Promise((resolve, reject) =>
+	{
+		const started = Date.now();
+		const poll = () =>
+		{
+			if(exit.mock.callCount() > 0)
+			{
+				resolve();
+				return;
+			}
+			if(Date.now() - started > 5000)
+			{
+				reject(new Error("el pipeline de build no terminó dentro de 5s (process.exit nunca fue llamado)"));
+				return;
+			}
+			setTimeout(poll, 5);
+		};
+		poll();
+	});
+};
+
+/**
  * @param {import("node:test").TestContext} t
- * @returns {{ rm: MockHandle, mkdir: MockHandle, cp: MockHandle, writeFile: MockHandle, build: MockHandle, exit: MockHandle, html: MockHandle, jsx: MockHandle }}
+ * @returns {{ rm: MockHandle, mkdir: MockHandle, cp: MockHandle, writeFile: MockHandle, build: MockHandle, exit: MockHandle, html: MockHandle, jsx: MockHandle, settle: () => Promise<void> }}
  */
 const setupMocks = (t) =>
 {
@@ -111,6 +168,7 @@ const setupMocks = (t) =>
 	const writeFile = t.mock.method(fs.promises, "writeFile", async () => {});
 	const build = t.mock.method(esbuild, "build", async () => {});
 	const exit = t.mock.method(process, "exit", () => {});
+	const settle = createSettle(exit);
 	const html = t.mock.method(buildFRONT, "html", async () => ({ ...CLEAN_HTML_OUTPUT }));
 	const jsx = t.mock.method(buildFRONT, "jsx", async () => ({ ...CLEAN_HTML_OUTPUT }));
 	t.mock.method(console, "log", () => {});
@@ -125,7 +183,7 @@ const setupMocks = (t) =>
 		String(filePath).endsWith("server.js") ? "process.cwd()" : realReadFileSync(filePath, ...args));
 	t.mock.method(fs, "existsSync", () => true);
 
-	return { rm, mkdir, cp, writeFile, build, exit, html, jsx };
+	return { rm, mkdir, cp, writeFile, build, exit, html, jsx, settle };
 };
 
 /**
@@ -133,6 +191,20 @@ const setupMocks = (t) =>
  */
 describe("lexpress-builder", () =>
 {
+	/**
+	 * Cierra los http.Server enlazados durante la suite (ver trackedServers arriba)
+	 * para que el proceso hijo del runner quede con el loop de eventos vacío y pueda
+	 * terminar; sin esto node --test --test-concurrency=1 espera su exit eternamente.
+	 * @returns {Promise<void>}
+	 */
+	after(async() =>
+	{
+		for(const server of trackedServers.splice(0))
+		{
+			await new Promise(resolve => server.close(() => resolve()));
+		}
+	});
+
 	/**
 	 * @param {import("node:test").TestContext} t
 	 * @returns {Promise<void>}
@@ -147,6 +219,8 @@ describe("lexpress-builder", () =>
 
 			app.html("/", "/v/index.html");
 			await app.listen(0, () => {});
+
+			await mocks.settle();
 
 			const options = mocks.build.mock.calls[0].arguments[0];
 			assert.equal(options.format, "esm");
@@ -172,6 +246,8 @@ describe("lexpress-builder", () =>
 
 			app.html("/", "/v/index.html");
 			await app.listen(0, () => {});
+
+			await mocks.settle();
 
 			const options = mocks.build.mock.calls[0].arguments[0];
 			assert.equal(options.format, undefined);
@@ -225,6 +301,8 @@ describe("lexpress-builder", () =>
 			app.html("/", "/v/index.html");
 			await app.listen(0, () => {});
 
+			await mocks.settle();
+
 			const options = mocks.build.mock.calls[0].arguments[0];
 			assert.equal(options.bundle, true);
 			assert.equal(options.minify, true);
@@ -253,6 +331,8 @@ describe("lexpress-builder", () =>
 			app.jsx("/about", "/v/about.jsx", "/v/layout.jsx");
 			await app.listen(0, () => {});
 
+			await mocks.settle();
+
 			assert.equal(mocks.jsx.mock.calls.length, 1);
 			assert.equal(mocks.jsx.mock.calls[0].arguments[0], "/v/about.jsx");
 			assert.equal(mocks.jsx.mock.calls[0].arguments[1], "/v/layout.jsx");
@@ -279,6 +359,8 @@ describe("lexpress-builder", () =>
 
 			app.html("/home", "/v/home.html");
 			await app.listen(0, () => {});
+
+			await mocks.settle();
 
 			assert.equal(mocks.html.mock.calls.length, 1);
 			assert.equal(mocks.html.mock.calls[0].arguments[0], "/v/home.html");
@@ -307,6 +389,8 @@ describe("lexpress-builder", () =>
 			app.public("/v/pub2");
 			await app.listen(0, () => {});
 
+			await mocks.settle();
+
 			assert.equal(mocks.cp.mock.calls.length, 2);
 			assert.equal(mocks.cp.mock.calls[0].arguments[0], "/v/pub1");
 			assert.equal(mocks.cp.mock.calls[1].arguments[0], "/v/pub2");
@@ -332,6 +416,8 @@ describe("lexpress-builder", () =>
 
 			app.html("/home", "/v/home.html");
 			await app.listen(0, () => {});
+
+			await mocks.settle();
 
 			assert.equal(mocks.rm.mock.calls.length, 1);
 			assert.equal(mocks.rm.mock.calls[0].arguments[0], OUT_DIR);
@@ -371,6 +457,8 @@ describe("lexpress-builder", () =>
 			app.public("/v/pub2");
 			await app.listen(0, () => {});
 
+			await mocks.settle();
+
 			assert.equal(mocks.cp.mock.calls.length, 2);
 			assert.equal(mocks.cp.mock.calls[0].arguments[0], "/v/pub1");
 			assert.ok(String(mocks.cp.mock.calls[0].arguments[1]).endsWith(".lex-press-app/0/public/0"));
@@ -399,6 +487,8 @@ describe("lexpress-builder", () =>
 			app.html("/home", "/v/home.html");
 			app.jsx("/about", "/v/about.jsx", "/v/layout.jsx");
 			await app.listen(0, () => {});
+
+			await mocks.settle();
 
 			assert.equal(mocks.html.mock.calls.length, 1);
 			assert.equal(mocks.html.mock.calls[0].arguments[0], "/v/home.html");
@@ -445,6 +535,8 @@ describe("lexpress-builder", () =>
 			app.html("/", "/v/index.html");
 			await app.listen(0, () => {});
 
+			await mocks.settle();
+
 			assert.equal(mocks.build.mock.calls.length, 1);
 			const options = mocks.build.mock.calls[0].arguments[0];
 			assert.ok(Array.isArray(options.entryPoints));
@@ -479,6 +571,7 @@ describe("lexpress-builder", () =>
 			t.mock.method(fs.promises, "writeFile", async () => {});
 			t.mock.method(esbuild, "build", async () => {});
 			const exit = t.mock.method(process, "exit", () => {});
+			const settle = createSettle(exit);
 			t.mock.method(console, "log", () => {});
 			t.mock.method(console, "warn", () => {});
 			t.mock.method(console, "error", () => {});
@@ -498,6 +591,8 @@ describe("lexpress-builder", () =>
 
 			app.html("/home", "/v/home.html");
 			await app.listen(0, () => {});
+
+			await settle();
 
 			assert.equal(exit.mock.calls[0].arguments[0], 1);
 			const lastRmCall = rm.mock.calls[rm.mock.calls.length - 1];
@@ -538,6 +633,8 @@ describe("lexpress-builder", () =>
 			app.views("/v/views");
 			await app.listen(0, () => {});
 
+			await mocks.settle();
+
 			// Buscar los writes de los maps JSON
 			const mapWrites = mocks.writeFile.mock.calls.filter(call =>
 				String(call.arguments[0]).endsWith("-map.json")
@@ -572,6 +669,8 @@ describe("lexpress-builder", () =>
 
 			app.public("/v/pub1", { key: "my-custom-key" });
 			await app.listen(0, () => {});
+
+			await mocks.settle();
 
 			const mapWrites = mocks.writeFile.mock.calls.filter(call =>
 				String(call.arguments[0]).endsWith("public-map.json")
@@ -614,6 +713,8 @@ describe("lexpress-builder", () =>
 			app.views("/v/views", { key: "my-views-key" });
 			await app.listen(0, () => {});
 
+			await mocks.settle();
+
 			const mapWrites = mocks.writeFile.mock.calls.filter(call =>
 				String(call.arguments[0]).endsWith("views-map.json")
 			);
@@ -643,7 +744,8 @@ describe("lexpress-builder", () =>
 			t.mock.method(fs.promises, "cp", async () => {});
 			t.mock.method(fs.promises, "writeFile", async () => {});
 			t.mock.method(esbuild, "build", async () => {});
-			t.mock.method(process, "exit", () => {});
+			const exit = t.mock.method(process, "exit", () => {});
+			const settle = createSettle(exit);
 			const info = t.mock.method(console, "info", () => {});
 			t.mock.method(console, "log", () => {});
 			t.mock.method(console, "warn", () => {});
@@ -659,6 +761,8 @@ describe("lexpress-builder", () =>
 
 			app.html("/", "/v/index.html");
 			await app.listen(0, () => {});
+
+			await settle();
 
 			assert.ok(info.mock.calls.some(call =>
 				String(call.arguments[0]).includes("__dirname") &&

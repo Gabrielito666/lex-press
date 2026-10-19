@@ -142,32 +142,132 @@ describe("lexpress-production", () =>
 	 * @param {any} t
 	 * @returns {void}
 	 */
-	it("jsx: es no-op y retorna la misma app", (t) =>
+	it("jsx: registra app.get cuando la ruta existe en htmls-map", (t) =>
 	{
-		mockFileSystem(t);
+		mockFileSystem(t, {
+			htmlsMap: { "/ruta": "hashA" },
+			htmlFiles: { hashA: "<html>ruta jsx</html>" }
+		});
 
 		const freshLexpress = reRequireLexpress();
 		const app = freshLexpress({ tag: "test" });
 
-		const result = app.jsx("r", "p", "l");
+		/**@type {Array<{ route: string; handler: (req: unknown, res: unknown) => void }>}*/
+		const registered = [];
+		t.mock.method(app, "get", (route, handler) =>
+		{
+			registered.push({ route, handler });
+		});
+
+		const result = app.jsx("/ruta", "p", "l");
 
 		assert.strictEqual(result, app);
+		assert.equal(registered.length, 1);
+		assert.equal(registered[0].route, "/ruta");
+
+		// res stub con métodos encadenables que captura lo enviado
+		const sent = { html: "" };
+		const res =
+		{
+			set: () => res,
+			send: (html) =>
+			{
+				sent.html = String(html);
+				return res;
+			}
+		};
+		registered[0].handler({ baseUrl: "" }, res);
+		assert.ok(sent.html.includes("ruta jsx"));
 	});
 
 	/**
 	 * @param {any} t
 	 * @returns {void}
 	 */
-	it("html: es no-op y retorna la misma app", (t) =>
+	it("jsx: no registra handler si la ruta no está en htmls-map", (t) =>
 	{
 		mockFileSystem(t);
 
 		const freshLexpress = reRequireLexpress();
 		const app = freshLexpress({ tag: "test" });
 
-		const result = app.html("r", "p");
+		/**@type {Array<{ route: string; handler: (req: unknown, res: unknown) => void }>}*/
+		const registered = [];
+		t.mock.method(app, "get", (route, handler) =>
+		{
+			registered.push({ route, handler });
+		});
+
+		const result = app.jsx("/perdida", "p", "l");
 
 		assert.strictEqual(result, app);
+		assert.equal(registered.length, 0);
+	});
+
+	/**
+	 * @param {any} t
+	 * @returns {void}
+	 */
+	it("html: registra app.get cuando la ruta existe en htmls-map", (t) =>
+	{
+		mockFileSystem(t, {
+			htmlsMap: { "/ruta": "hashA" },
+			htmlFiles: { hashA: "<html>ruta html</html>" }
+		});
+
+		const freshLexpress = reRequireLexpress();
+		const app = freshLexpress({ tag: "test" });
+
+		/**@type {Array<{ route: string; handler: (req: unknown, res: unknown) => void }>}*/
+		const registered = [];
+		t.mock.method(app, "get", (route, handler) =>
+		{
+			registered.push({ route, handler });
+		});
+
+		const result = app.html("/ruta", "p");
+
+		assert.strictEqual(result, app);
+		assert.equal(registered.length, 1);
+		assert.equal(registered[0].route, "/ruta");
+
+		// res stub con métodos encadenables que captura lo enviado
+		const sent = { html: "" };
+		const res =
+		{
+			set: () => res,
+			send: (html) =>
+			{
+				sent.html = String(html);
+				return res;
+			}
+		};
+		registered[0].handler({ baseUrl: "" }, res);
+		assert.ok(sent.html.includes("ruta html"));
+	});
+
+	/**
+	 * @param {any} t
+	 * @returns {void}
+	 */
+	it("html: no registra si falta en htmls-map", (t) =>
+	{
+		mockFileSystem(t);
+
+		const freshLexpress = reRequireLexpress();
+		const app = freshLexpress({ tag: "test" });
+
+		/**@type {Array<{ route: string; handler: (req: unknown, res: unknown) => void }>}*/
+		const registered = [];
+		t.mock.method(app, "get", (route, handler) =>
+		{
+			registered.push({ route, handler });
+		});
+
+		const result = app.html("/perdida", "p");
+
+		assert.strictEqual(result, app);
+		assert.equal(registered.length, 0);
 	});
 
 	/**

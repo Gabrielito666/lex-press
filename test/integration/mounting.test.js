@@ -23,10 +23,10 @@ const { describe, it, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const fs = require("node:fs");
-const net = require("node:net");
 const { spawn, spawnSync } = require("node:child_process");
 const buildFRONT = require("#lib/build-front");
 const { createApps } = require("../../fixtures/mounting/apps.js");
+const { startServer, closeServer, getFreePort, waitForListening } = require("../helpers/http.js");
 
 /**
  * Path absoluto del page.html de app1 (raíz).
@@ -48,87 +48,21 @@ const home2PagePath = path.resolve(process.cwd(), "fixtures/mounting/views2/home
 const SUB_BASE = "/app-2";
 
 /**
- * Levanta un server express sobre un puerto efímero.
- * @param {ReturnType<typeof import("#lib/lex-press-dev")>} app
- * @returns {Promise<{ server: import("node:http").Server; port: number }>}
+ * Levanta el server de producción ya compilado (.lex-press-app/server.js) en un
+ * puerto efímero y espera a que esté escuchando. Encapsula la secuencia que
+ * repiten los dos before hooks del describe de producción.
+ * @returns {Promise<{ child: import("node:child_process").ChildProcess; base: string }>}
  */
-const startServer = (app) =>
+const startProdServer = async() =>
 {
-	return new Promise(resolve =>
-	{
-		const server = app.listen(0, () =>
-		{
-			const address = /**@type {import("node:net").AddressInfo}*/ (server.address());
-			resolve({ server, port: address.port });
-		});
+	const port = await getFreePort();
+	const child = spawn("node", [".lex-press-app/server.js"], {
+		env: { ...process.env, PORT: String(port) },
+		stdio: ["ignore", "pipe", "pipe"],
 	});
-};
+	await waitForListening(child, /escuchando el puerto/);
 
-/**
- * Cierra un server HTTP esperando el cierre de sus conexiones.
- * @param {import("node:http").Server} server
- * @returns {Promise<void>}
- */
-const closeServer = (server) =>
-{
-	return new Promise(resolve => server.close(() => resolve()));
-};
-
-/**
- * Obtiene un puerto libre abriendo un server efímero y cerrándolo.
- * @returns {Promise<number>}
- */
-const getFreePort = () =>
-{
-	return new Promise((resolve, reject) =>
-	{
-		const server = net.createServer();
-		server.on("error", reject);
-		server.listen(0, () =>
-		{
-			const address = /**@type {import("node:net").AddressInfo}*/ (server.address());
-			server.close(() => resolve(address.port));
-		});
-	});
-};
-
-/**
- * Espera a que el stdout de un child process matchee un patrón (el server
- * listo para recibir). Rechaza si el proceso muere antes o se agota el
- * timeout.
- * @param {import("node:child_process").ChildProcess} child
- * @param {RegExp} pattern
- * @param {number} timeoutMs
- * @returns {Promise<void>}
- */
-const waitForListening = (child, pattern, timeoutMs = 15000) =>
-{
-	return new Promise((resolve, reject) =>
-	{
-		let out = "";
-
-		const timer = setTimeout(() =>
-		{
-			child.kill();
-			reject(new Error(`timeout esperando al server: ${out}`));
-		}, timeoutMs);
-
-		child.stdout.on("data", (chunk) =>
-		{
-			out += chunk.toString();
-			if(pattern.test(out))
-			{
-				clearTimeout(timer);
-				resolve();
-			}
-		});
-		child.stderr.on("data", (chunk) => { out += "[stderr] " + chunk.toString(); });
-		child.on("exit", (code) =>
-		{
-			clearTimeout(timer);
-			reject(new Error(`el server murió antes de escuchar (code ${code}): ${out}`));
-		});
-	});
+	return { child, base: `http://127.0.0.1:${port}` };
 };
 
 /**
@@ -421,6 +355,9 @@ describe("integración montaje de sub-apps", () =>
 			const build = spawnSync("node", ["fixtures/mounting/index.js", "--build"], {
 				encoding: "utf8",
 				timeout: 120000,
+				// El builder enlaza el puerto REAL incluso con --build; PORT=0 pide
+				// uno efímero y evita el EADDRINUSE contra el 3000 del fixture.
+				env: { ...process.env, PORT: "0" },
 			});
 			assert.strictEqual(build.status, 0, build.stderr || "falló el build de producción");
 		});
@@ -440,14 +377,9 @@ describe("integración montaje de sub-apps", () =>
 			 */
 			before(async() =>
 			{
-				const port = await getFreePort();
-				prodChild = spawn("node", [".lex-press-app/server.js"], {
-					env: { ...process.env, PORT: String(port) },
-					stdio: ["ignore", "pipe", "pipe"],
-				});
-				await waitForListening(prodChild, /escuchando el puerto/);
-
-				base = `http://127.0.0.1:${port}`;
+				const started = await startProdServer();
+				prodChild = started.child;
+				base = started.base;
 			});
 
 			/**
@@ -529,14 +461,9 @@ describe("integración montaje de sub-apps", () =>
 			 */
 			before(async() =>
 			{
-				const port = await getFreePort();
-				prodChild = spawn("node", [".lex-press-app/server.js"], {
-					env: { ...process.env, PORT: String(port) },
-					stdio: ["ignore", "pipe", "pipe"],
-				});
-				await waitForListening(prodChild, /escuchando el puerto/);
-
-				base = `http://127.0.0.1:${port}`;
+				const started = await startProdServer();
+				prodChild = started.child;
+				base = started.base;
 			});
 
 			/**

@@ -9,6 +9,7 @@ const assert = require("node:assert/strict");
 const path = require("node:path");
 const buildFRONT = require("#lib/build-front");
 const lexpress = require("#lib/lex-press-dev");
+const { startServer, closeServer } = require("../helpers/http.js");
 
 /**
  * Path absoluto del fixture home/page.html.
@@ -47,33 +48,6 @@ const nonexistentHtmlPath = path.resolve(process.cwd(), "fixtures/dev/views/none
  * @type {{ current: string|null }}
  */
 const homeroAssetPath = { current: null };
-
-/**
- * Levanta un servidor express sobre un puerto efímero.
- * @param {ReturnType<typeof lexpress>} app
- * @returns {Promise<{ server: import("node:http").Server; port: number }>}
- */
-const startServer = (app) =>
-{
-	return new Promise(resolve =>
-	{
-		const server = app.listen(0, () =>
-		{
-			const address = /**@type {import("node:net").AddressInfo}*/ (server.address());
-			resolve({ server, port: address.port });
-		});
-	});
-};
-
-/**
- * Cierra un servidor HTTP esperando el cierre de sus conexiones.
- * @param {import("node:http").Server} server
- * @returns {Promise<void>}
- */
-const closeServer = (server) =>
-{
-	return new Promise(resolve => server.close(() => resolve()));
-};
 
 /**
  * Devuelve el basename del asset homero.webp compilado.
