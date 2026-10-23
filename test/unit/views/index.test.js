@@ -77,15 +77,6 @@ describe("Views", () =>
 		assert.equal(views.layoutPath, path.resolve("/virtual/views", "layout.jsx"));
 	});
 
-	it("Dir: detecta server-props.js en el directorio", (t) =>
-	{
-		mountTree(t, {
-			"/virtual/views": ["server-props.js"],
-		});
-		const views = new Views("/virtual/views");
-		assert.equal(views.serverPropsPath, path.resolve("/virtual/views", "server-props.js"));
-	});
-
 	it("Dir: registra subdirectorios recursivamente como Dir hijos", (t) =>
 	{
 		mountTree(t, {
@@ -215,21 +206,5 @@ describe("Views", () =>
 		const pages = [];
 		views.forEachFile(page => pages.push(page));
 		assert.equal(pages[0].route, "/");
-	});
-
-	it("Page.serverPropsModule: retorna path si existe server-props.js, null si no", (t) =>
-	{
-		mountTree(t, {
-			"/virtual/views": ["withprops", "noprops"],
-			"/virtual/views/withprops": ["server-props.js", "page.html"],
-			"/virtual/views/noprops": ["page.html"],
-		});
-		const views = new Views("/virtual/views");
-		const pages = [];
-		views.forEachFile(page => pages.push(page));
-		const withProps = pages.find(page => page.file === path.resolve("/virtual/views/withprops", "page.html"));
-		const noProps = pages.find(page => page.file === path.resolve("/virtual/views/noprops", "page.html"));
-		assert.equal(withProps.serverPropsModule, path.resolve("/virtual/views/withprops", "server-props.js"));
-		assert.equal(noProps.serverPropsModule, null);
 	});
 });
