@@ -1,0 +1,16 @@
+<html>
+<head>
+	<script>
+		import { getStaticProps } from "lex-press/static-props";
+
+		const el = document.createElement("h1");
+
+		el.innerText = getStaticProps().title;
+
+		document.querySelector("body").appendChild(el);
+	</script>
+</head>
+<body>
+	<h2>html-page-base</h2>
+</body>
+</html>
