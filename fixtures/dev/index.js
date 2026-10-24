@@ -27,6 +27,23 @@ const blogViewsPath = path.resolve(process.cwd(), "fixtures/dev/views-blog");
 app.views(viewsPath);
 blogApp.views(blogViewsPath);
 
+// Demo visual de staticProps: reutiliza page.jsx/layout.jsx de fixtures/static-props
+// y hornea las props en build (no por request). Ruta: /static-props
+app.jsx(
+	"/static-props",
+	path.resolve(process.cwd(), "fixtures/static-props/views/page.jsx"),
+	path.resolve(process.cwd(), "fixtures/static-props/views/layout.jsx"),
+	{
+		staticProps: {
+			title: "STATIC-PROPS EN LA FIXTURE DEV",
+			subtitle: "horneada en build, no por request",
+			count: 3,
+			tags: ["static", "build-time", "sin funciones"],
+			nested: { ok: true, author: "gabrielito" },
+		},
+	}
+);
+
 app.use("/blog", blogApp);
 
 const port = Number(process.env.PORT ?? 3000);

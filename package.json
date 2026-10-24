@@ -4,6 +4,10 @@
   "exports": {
     ".": {
       "require": "./lib/lex-press/index.js"
+    },
+    "./static-props": {
+      "require": "./lib/static-props/index.js",
+      "default": "./lib/static-props/index.js"
     }
   },
   "imports": {

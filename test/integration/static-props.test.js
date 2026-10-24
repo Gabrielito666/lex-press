@@ -13,8 +13,7 @@ const assert = require("node:assert/strict");
 const path = require("node:path");
 const fs = require("node:fs");
 const { spawn, spawnSync } = require("node:child_process");
-const { createStaticPropsApps } = require("../../fixtures/static-props/apps.js");
-const { startServer, closeServer, getFreePort, waitForListening } = require("../helpers/http.js");
+const { getFreePort, waitForListening } = require("../helpers/http.js");
 
 /**
  * Title inyectado vía el canal app.jsx(route, page, layout, { staticProps }).
@@ -33,6 +32,23 @@ const TITLE_APP_VIEWS = "STATIC-JSX-VIA-APP-VIEWS";
  * @type {string}
  */
 const TITLE_APP_HTML = "STATIC-HTML-VIA-APP-HTML";
+
+/**
+ * Levanta el entry del fixture en modo desarrollo (sin --build) en un puerto
+ * efímero y espera a que esté escuchando.
+ * @returns {Promise<{ child: import("node:child_process").ChildProcess; base: string }>}
+ */
+const startDevServer = async() =>
+{
+	const port = await getFreePort();
+	const child = spawn("node", ["fixtures/static-props/index.js"], {
+		env: { ...process.env, PORT: String(port) },
+		stdio: ["ignore", "pipe", "pipe"],
+	});
+	await waitForListening(child, /escuchando el puerto/, 30000);
+
+	return { child, base: `http://127.0.0.1:${port}` };
+};
 
 /**
  * Levanta el server de producción ya compilado (.lex-press-app/server.js) en un
@@ -92,10 +108,10 @@ describe("integración staticProps", () =>
 	/**
 	 * @returns {void}
 	 */
-	describe("dev server (in-process)", () =>
+	describe("dev server (child_process)", () =>
 	{
-		/**@type {import("node:http").Server}*/
-		let server;
+		/**@type {import("node:child_process").ChildProcess}*/
+		let devChild;
 		/**@type {string}*/
 		let base;
 
@@ -104,18 +120,20 @@ describe("integración staticProps", () =>
 		 */
 		before(async() =>
 		{
-			const { app } = createStaticPropsApps({ tag: "static-props-dev" });
-			const started = await startServer(app);
-			server = started.server;
-			base = `http://127.0.0.1:${started.port}`;
+			const started = await startDevServer();
+			devChild = started.child;
+			base = started.base;
 		});
 
 		/**
-		 * @returns {Promise<void>}
+		 * @returns {void}
 		 */
-		after(async() =>
+		after(() =>
 		{
-			await closeServer(server);
+			if(devChild && !devChild.killed)
+			{
+				devChild.kill();
+			}
 		});
 
 		/**
