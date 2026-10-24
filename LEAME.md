@@ -58,7 +58,7 @@ El bundle del javascript soporta imports de archivos css o module.css, archivos 
 Similar a `app.html` pero recibe route, page y layout:
 
 ```js
-app.jsx("/home", "./pages/layout.jsx", "./pages/page.jsx");
+app.jsx("/home", "./pages/page.jsx", "./pages/layout.jsx");
 ```
 
 Layout debe exportar un componente Layout y Page debe exportar un componente Page:
@@ -115,6 +115,41 @@ Un esquema como este serviría los elementos page.
 Los métodos `html`, `jsx` y `views` no son dinámicos, por lo que luego de `listen` ya no tendrán efecto. Esto es porque en producción no hay build por razones de seguridad.
 
 Si deseas crear o quitar rutas luego de `listen`, debes hacerlo como lo harías con Express.
+
+## Static props
+
+`app.html`, `app.jsx` y `app.views` aceptan un objeto opcional `staticProps` que se hornea dentro de la vista compilada:
+
+```js
+app.jsx("/home", "./pages/page.jsx", "./pages/layout.jsx", { staticProps: { heroTitle: "MY HERO" } });
+app.views("./views", { staticProps: { heroTitle: "MY HERO" } }); // cada ruta escaneada
+```
+
+Leela de forma síncrona desde la vista, tanto en el render del servidor como en el cliente. Declara una sola vez, con un cast, la forma que esperas — el payload es `Record<string, unknown>`:
+
+```js
+import { getStaticProps } from "lex-press/static-props";
+
+/** @type {{ heroTitle: string }} */
+const staticProps = getStaticProps();
+```
+
+Los valores válidos son datos serializables en JSON: primitivos, arrays y objetos planos. Las funciones y los símbolos explotan en el build, no en el navegador.
+
+El objeto se consume mientras se compilan las vistas, así que queda congelado por build: nunca cambia por request y termina hardcodeado en el HTML — si lo editas, hay que volver a compilar. Está pensado para app factories, donde una librería que exporta una app lexpress recibe su configuración desde el host:
+
+```js
+const bannerApp = (config) =>
+{
+    const app = lexpress({ tag: "banner" });
+    app.jsx("/banner", __dirname + "/views/page.jsx", __dirname + "/views/layout.jsx", { staticProps: config });
+    return app;
+};
+
+app.use(bannerApp({ heroTitle: "MY HERO" }));
+```
+
+Cómo funciona por dentro: `docs/static-props.md`.
 
 ## Sub-apps
 

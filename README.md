@@ -79,7 +79,7 @@ The JavaScript bundle supports imports of CSS or module.css files, text files, J
 Similar to `app.html` but receives route, page, and layout:
 
 ```js
-app.jsx("/home", "./pages/layout.jsx", "./pages/page.jsx");
+app.jsx("/home", "./pages/page.jsx", "./pages/layout.jsx");
 ```
 
 Layout must export a Layout component and Page must export a Page component:
@@ -146,6 +146,41 @@ Without a key, the path is normalized relative to `process.cwd()`, which may not
 The `html`, `jsx`, and `views` methods are not dynamic, so after `listen` they will no longer have an effect. This is because in production there is no build for security reasons.
 
 If you want to create or remove routes after `listen`, you must do it as you would with Express.
+
+## Static props
+
+`app.html`, `app.jsx` and `app.views` accept an optional `staticProps` object that gets baked into the compiled view:
+
+```js
+app.jsx("/home", "./pages/page.jsx", "./pages/layout.jsx", { staticProps: { heroTitle: "MY HERO" } });
+app.views("./views", { staticProps: { heroTitle: "MY HERO" } }); // each scanned route
+```
+
+Read it synchronously from the view, both in the server render and in the client. State the shape you expect once with a cast — the payload is `Record<string, unknown>`:
+
+```js
+import { getStaticProps } from "lex-press/static-props";
+
+/** @type {{ heroTitle: string }} */
+const staticProps = getStaticProps();
+```
+
+Valid values are JSON-serializable data: primitives, arrays and plain objects. Functions and symbols throw at build time, not in the browser.
+
+The object is consumed while the views are compiled, so it is frozen per build: it never changes per request and it ends up hardcoded in the HTML — if you edit it, you rebuild. It is meant for app factories, where a library that exports a lexpress app receives its configuration from the host:
+
+```js
+const bannerApp = (config) =>
+{
+    const app = lexpress({ tag: "banner" });
+    app.jsx("/banner", __dirname + "/views/page.jsx", __dirname + "/views/layout.jsx", { staticProps: config });
+    return app;
+};
+
+app.use(bannerApp({ heroTitle: "MY HERO" }));
+```
+
+How it works internally: `docs/static-props.md`.
 
 ## Sub-apps
 
